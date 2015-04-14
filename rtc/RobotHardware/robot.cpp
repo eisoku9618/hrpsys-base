@@ -67,20 +67,24 @@ bool robot::init()
     set_number_of_force_sensors(numSensors(Sensor::FORCE));
     set_number_of_gyro_sensors(numSensors(Sensor::RATE_GYRO));
     set_number_of_accelerometers(numSensors(Sensor::ACCELERATION));
+    set_number_of_attitude_sensors(numSensors(Sensor::ATTITUDE));
 
     gyro_sum.resize(numSensors(Sensor::RATE_GYRO));
     accel_sum.resize(numSensors(Sensor::ACCELERATION));
+    att_sum.resize(numSensors(Sensor::ATTITUDE));
     force_sum.resize(numSensors(Sensor::FORCE));
 
     if ((number_of_joints() != numJoints())
 	|| (number_of_force_sensors() != numSensors(Sensor::FORCE))
 	|| (number_of_gyro_sensors() != numSensors(Sensor::RATE_GYRO))
-	|| (number_of_accelerometers() != numSensors(Sensor::ACCELERATION))){
+	|| (number_of_accelerometers() != numSensors(Sensor::ACCELERATION))
+        || (number_of_attitude_sensors() != numSensors(Sensor::ATTITUDE))){
       std::cerr << "VRML and IOB are inconsistent" << std::endl;
       std::cerr << "  joints:" << numJoints() << "(VRML), " << number_of_joints() << "(IOB)"  << std::endl;
       std::cerr << "  force sensor:" << numSensors(Sensor::FORCE) << "(VRML), " << number_of_force_sensors() << "(IOB)"  << std::endl;
       std::cerr << "  gyro sensor:" << numSensors(Sensor::RATE_GYRO) << "(VRML), " << number_of_gyro_sensors() << "(IOB)"  << std::endl;
       std::cerr << "  accelerometer:" << numSensors(Sensor::ACCELERATION) << "(VRML), " << number_of_accelerometers() << "(IOB)"  << std::endl;
+      std::cerr << "  attitude sensor:" << numSensors(Sensor::ATTITUDE) << "(VRML), " << number_of_attitude_sensors() << "(IOB)"  << std::endl;
       return false;
     }
 
@@ -431,6 +435,11 @@ void robot::readGyroSensor(unsigned int i_rank, double *o_rates)
 void robot::readAccelerometer(unsigned int i_rank, double *o_accs)
 {
     read_accelerometer(i_rank, o_accs);
+}
+
+void robot::readAttitudeSensor(unsigned int i_rank, double *o_att)
+{
+    read_attitude_sensor(i_rank, o_att);
 }
 
 void robot::readForceSensor(unsigned int i_rank, double *o_forces)

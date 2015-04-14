@@ -62,6 +62,12 @@ void RobotHardwareService_impl::getStatus(OpenHRP::RobotHardwareService::RobotSt
         m_robot->readAccelerometer(i, rs->accel[i].get_buffer());
     }
 
+    rs->quaternion.length(m_robot->numSensors(Sensor::ATTITUDE));
+    for (unsigned int i=0; i<rs->quaternion.length(); i++){
+        rs->quaternion[i].length(4);
+        m_robot->readAttitudeSensor(i, rs->quaternion[i].get_buffer());
+    }
+
     rs->force.length(m_robot->numSensors(Sensor::FORCE));
     for (unsigned int i=0; i<rs->force.length(); i++){
         rs->force[i].length(6);

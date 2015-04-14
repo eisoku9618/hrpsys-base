@@ -228,6 +228,21 @@ void AccelSensorPortHandler::update(double time)
     write(time);
 }
 
+AttitudeSensorPortHandler::AttitudeSensorPortHandler(
+    RTC::DataFlowComponentBase *i_rtc, 
+    const char *i_portName,
+    AttitudeSensor *i_sensor) : 
+    SensorPortHandler<AttitudeSensor, RTC::TimedDoubleSeq>(i_rtc, i_portName, i_sensor)
+{
+    m_data.data.length(4);
+}
+
+void AttitudeSensorPortHandler::update(double time)
+{
+    setVector4(m_sensor->quat, m_data.data, 0);
+    write(time);
+}
+
 RangeSensorPortHandler::RangeSensorPortHandler(
     RTC::DataFlowComponentBase *i_rtc, 
     const char *i_portName,

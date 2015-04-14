@@ -147,6 +147,17 @@ RTC::ReturnCode_t RobotHardware::onInitialize()
       registerOutPort(s->name.c_str(), *m_accOut[i]);
   }
 
+  int natt = m_robot->numSensors(Sensor::ATTITUDE);
+  std::cout << "the number of attitude sensor = " << natt << std::endl;
+  m_att.resize(natt);
+  m_attOut.resize(natt);
+  for (unsigned int i=0; i<m_att.size(); i++){
+      Sensor *s = m_robot->sensor(Sensor::ATTITUDE, i);
+      std::cout << s->name << std::endl;
+      m_attOut[i] = new OutPort<TimedDoubleSeq>(s->name.c_str(), m_att[i]);
+      registerOutPort(s->name.c_str(), *m_attOut[i]);
+  }
+
   int nforce = m_robot->numSensors(Sensor::FORCE);
   std::cout << "the number of force sensors = " << nforce << std::endl;
   m_force.resize(nforce);
@@ -268,6 +279,13 @@ RTC::ReturnCode_t RobotHardware::onExecute(RTC::UniqueId ec_id)
       m_acc[i].data.ay = acc[1];
       m_acc[i].data.az = acc[2];
       m_acc[i].tm = tm;
+      std::cerr << "acc : " << m_acc[i].data.az << std::endl;
+  }
+
+  for (unsigned int i=0; i<m_att.size(); i++){
+      m_robot->readAttitudeSensor(i, m_att[i].data.get_buffer());
+      m_att[i].tm = tm;
+      std::cerr << "quaternion : " << m_att[i].data[0] << std::endl;
   }
 
   for (unsigned int i=0; i<m_force.size(); i++){
@@ -305,6 +323,9 @@ RTC::ReturnCode_t RobotHardware::onExecute(RTC::UniqueId ec_id)
   }
   for (unsigned int i=0; i<m_accOut.size(); i++){
       m_accOut[i]->write();
+  }
+  for (unsigned int i=0; i<m_attOut.size(); i++){
+      m_attOut[i]->write();
   }
   for (unsigned int i=0; i<m_forceOut.size(); i++){
       m_forceOut[i]->write();

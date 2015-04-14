@@ -123,6 +123,13 @@ extern "C"{
      */
     int number_of_attitude_sensors();
 
+    /**
+     * @brief set the number of attitude sensors
+     * @param num the number of attitude sensors
+     * @return TRUE if the number of attitude sensors is set, FALSE otherwise
+     */
+    int set_number_of_attitude_sensors(int num);
+
     // @}
 
     /**
@@ -549,13 +556,31 @@ extern "C"{
     /**
      * @brief read output of attitude sensor
      * @param id	attitude sensor id
-     * @param att	roll-pitch-yaw angle[rad], length of array must be 3
+     * @param att	attitude, length of array must be 4
      * @retval		TRUE sensor values are read successfully
      * @retval		E_ID invalid id is specified
      * @retval		FALSE this function is not supported
      */
     int read_attitude_sensor(int id, double *att);
 
+    /**
+     * @brief read offset values for attitude output
+     * @param id	attitude id
+     * @param att	quaternion value, length of array must be 4
+     * @retval		TRUE offset values are read successfully
+     * @retval		E_ID invalid id is specified
+     * @retval		FALSE this function is not supported
+     */
+    int read_attitude_sensor_offset(int id, double *offset);
+
+    /**
+     * @brief write offset values for attitude output
+     * @param id	attitude id
+     * @param offset	offset values, length of array must be 4
+     * @retval		TRUE offset values are written successfully
+     * @retval		E_ID invalid id is specified
+     * @retval		FALSE this function is not supported
+     */
     int write_attitude_sensor_offset(int id, double *offset);
     //@}
 

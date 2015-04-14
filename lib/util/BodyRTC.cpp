@@ -255,6 +255,7 @@ void BodyRTC::createOutPort(const std::string &config)
         }
         hrp::Sensor *s;
         s = this->sensor<AccelSensor>(elements[0]);
+        if (!s) s = this->sensor<AttitudeSensor>(elements[0]);
         if (!s) s = this->sensor<RateGyroSensor>(elements[0]);
         if (!s) s = this->sensor<ForceSensor>(elements[0]);
         if (!s) s = this->sensor<RangeSensor>(elements[0]);
@@ -335,6 +336,19 @@ void BodyRTC::createOutPort(const std::string &config)
             return;
         }
         m_outports.push_back(new AccelSensorPortHandler(this, name.c_str(),s));
+    }else if(type == "ATTITUDE_SENSOR"){
+        if (elements.size()!=1){
+            std::cerr << "sensor name is not specified for port " << name
+                      << std::endl;
+            return;
+        }
+        AttitudeSensor *s = this->sensor<AttitudeSensor>(elements[0]);
+        if (!s){
+            std::cerr << "can't find a sensor(" << elements[0] << ")" 
+                      << std::endl;
+            return;
+        }
+        m_outports.push_back(new AttitudeSensorPortHandler(this, name.c_str(),s));
                                                         
     }else if(type == "RANGE_SENSOR"){
         if (elements.size()!=1){

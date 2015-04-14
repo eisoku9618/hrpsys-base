@@ -27,6 +27,7 @@ module OpenHRP
     typedef double DblArray6[6];
 
     typedef sequence<double, 3> DblSequence3;
+    typedef sequence<double, 4> DblSequence4;
     typedef sequence<double, 6> DblSequence6;
 
     /**
@@ -52,6 +53,7 @@ module OpenHRP
       sequence<DblSequence6>	force;    ///< forces[N] and torques[Nm]
       sequence<DblSequence3>	rateGyro; ///< angular velocities[rad/s]
       sequence<DblSequence3>	accel;    ///< accelerations[m/(s^2)]
+      sequence<DblSequence4>	quaternion;    ///< quaternion
       double			voltage;  ///< voltage of power supply[V]
       double			current;  ///< current[A] 
     };

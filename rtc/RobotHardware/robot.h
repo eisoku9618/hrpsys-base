@@ -164,6 +164,13 @@ public:
     void readAccelerometer(unsigned int i_rank, double *o_accs);
 
     /**
+       \brief read attitude sensor output
+       \param i_rank rank of attitude sensor
+       \param o_accs array of quaternion(length = 4)
+    */
+    void readAttitudeSensor(unsigned int i_rank, double *o_att);
+
+    /**
        \brief read force sensor output
        \param i_rank rank of force sensor
        \param o_forces array of force/torque(length = 6)[N, Nm]
@@ -278,7 +285,7 @@ private:
 
     std::vector< boost::array<double,3> > gyro_sum;
     std::vector< boost::array<double,3> > accel_sum;
-    std::vector< boost::array<double,3> > att_sum;
+    std::vector< boost::array<double,4> > att_sum;
     std::vector< boost::array<double,6> > force_sum;
 
     std::vector<double> pgain, old_pgain, default_pgain;

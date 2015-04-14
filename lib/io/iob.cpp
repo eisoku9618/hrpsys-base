@@ -149,8 +149,8 @@ int set_number_of_attitude_sensors(int num)
 {
     attitude_sensors.resize(num);
     for (unsigned int i=0; i<attitude_sensors.size();i++){
-        attitude_sensors[i].resize(3);
-        for (int j=0; j<3; j++){
+        attitude_sensors[i].resize(4);
+        for (int j=0; j<4; j++){
             attitude_sensors[i][j] = 0.0;
         }
     }
@@ -477,6 +477,11 @@ int write_force_offset(int id, double *offsets)
         force_offset[id][i] = offsets[i];
     }
     return TRUE;
+}
+
+int read_attitude_sensor_offset(int id, double *offset)
+{
+    return FALSE;
 }
 
 int write_attitude_sensor_offset(int id, double *offset)

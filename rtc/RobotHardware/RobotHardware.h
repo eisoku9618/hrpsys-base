@@ -147,6 +147,10 @@ class RobotHardware
   */
   std::vector<TimedAcceleration3D> m_acc;
   /**
+     \brief vector of actual attitude (vector length = number of attitude sensors)
+  */
+  std::vector<TimedDoubleSeq> m_att;
+  /**
      \brief vector of actual angular velocity (vector length = number of rate sensors)
   */
   std::vector<TimedAngularVelocity3D> m_rate;
@@ -164,6 +168,7 @@ class RobotHardware
   OutPort<TimedDoubleSeq> m_dqOut;
   OutPort<TimedDoubleSeq> m_tauOut;
   std::vector<OutPort<TimedAcceleration3D> *> m_accOut;
+  std::vector<OutPort<TimedDoubleSeq> *> m_attOut;
   std::vector<OutPort<TimedAngularVelocity3D> *> m_rateOut;
   std::vector<OutPort<TimedDoubleSeq> *> m_forceOut;
   OutPort<OpenHRP::TimedLongSeqSeq> m_servoStateOut;

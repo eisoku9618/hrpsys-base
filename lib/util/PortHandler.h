@@ -10,6 +10,7 @@ namespace hrp{
     class ForceSensor;
     class RateGyroSensor;
     class AccelSensor;
+    class AttitudeSensor;
     class RangeSensor;
     class VisionSensor;
 };
@@ -292,6 +293,17 @@ public:
     AccelSensorPortHandler(RTC::DataFlowComponentBase *i_rtc, 
                            const char *i_portName,
                            hrp::AccelSensor *i_sensor);
+    void update(double time);
+private:        
+};
+
+class AttitudeSensorPortHandler : 
+    public SensorPortHandler<hrp::AttitudeSensor, RTC::TimedDoubleSeq>
+{
+public:
+    AttitudeSensorPortHandler(RTC::DataFlowComponentBase *i_rtc, 
+                           const char *i_portName,
+                           hrp::AttitudeSensor *i_sensor);
     void update(double time);
 private:        
 };
