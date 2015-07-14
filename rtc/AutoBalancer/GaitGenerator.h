@@ -941,14 +941,15 @@ namespace rats
       std::vector<std::string> ans;
       for (size_t i = 0; i < l_r_list.size(); i++) {
           switch(l_r_list.at(i)) {
-          case RLEG : ans.push_back("rleg");
-          case LLEG : ans.push_back("lleg");
-          case RARM : ans.push_back("rarm");
-          case LARM : ans.push_back("rarm");
+          case RLEG : ans.push_back("rleg"); break;
+          case LLEG : ans.push_back("lleg"); break;
+          case RARM : ans.push_back("rarm"); break;
+          case LARM : ans.push_back("rarm"); break;
           default :
               ans.push_back("lleg");
-              std::cerr << "i : " << i << "l_r_list.at(i) : " << l_r_list.at(i) << std::endl;
+              std::cerr << "i : " << i << ", l_r_list.at(i) : " << l_r_list.at(i) << std::endl;
               std::cerr << "yabai " << std::endl;
+              break;
           }
       }
       return ans;

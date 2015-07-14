@@ -388,6 +388,7 @@ RTC::ReturnCode_t AutoBalancer::onExecute(RTC::UniqueId ec_id)
           }
         }
     }
+    std::cerr << "execute !!! : 1" << std::endl;
     if (m_emergencySignalIn.isNew()){
         m_emergencySignalIn.read();
         // if (!is_stop_mode) {
@@ -400,6 +401,7 @@ RTC::ReturnCode_t AutoBalancer::onExecute(RTC::UniqueId ec_id)
     hrp::Vector3 ref_basePos;
     hrp::Matrix33 ref_baseRot;
     hrp::Vector3 rel_ref_zmp; // ref zmp in base frame
+    std::cerr << "execute !!! : 2" << std::endl;
     if ( is_legged_robot ) {
       getCurrentParameters();
       getTargetParameters();
@@ -423,6 +425,7 @@ RTC::ReturnCode_t AutoBalancer::onExecute(RTC::UniqueId ec_id)
         }
         rel_ref_zmp = input_zmp;
       }
+      std::cerr << "execute !!! : 3" << std::endl;
       // transition
       if (!is_transition_interpolator_empty) {
         // transition_interpolator_ratio 0=>1 : IDLE => ABC
@@ -448,6 +451,7 @@ RTC::ReturnCode_t AutoBalancer::onExecute(RTC::UniqueId ec_id)
         control_mode = MODE_IDLE;
       }
     }
+    std::cerr << "execute !!! : 4" << std::endl;
     if ( m_qRef.data.length() != 0 ) { // initialized
       if (is_legged_robot) {
         for ( int i = 0; i < m_robot->numJoints(); i++ ){
@@ -494,6 +498,7 @@ RTC::ReturnCode_t AutoBalancer::onExecute(RTC::UniqueId ec_id)
       m_cog.data.z = ref_cog(2);
       m_cog.tm = m_qRef.tm;
     }
+    std::cerr << "execute !!! : 5" << std::endl;
     m_basePosOut.write();
     m_baseRpyOut.write();
     m_baseTformOut.write();
@@ -513,6 +518,7 @@ RTC::ReturnCode_t AutoBalancer::onExecute(RTC::UniqueId ec_id)
       prev_imu_sensor_pos = imu_sensor_pos;
       prev_imu_sensor_vel = imu_sensor_vel;
     }
+    std::cerr << "execute !!! : 6" << std::endl;
 
     // control parameters
     m_contactStates.tm = m_qRef.tm;
@@ -524,6 +530,7 @@ RTC::ReturnCode_t AutoBalancer::onExecute(RTC::UniqueId ec_id)
         m_limbCOPOffset[i].tm = m_qRef.tm;
         m_limbCOPOffsetOut[i]->write();
     }
+    std::cerr << "execute !!! : 7" << std::endl;
 
     return RTC::RTC_OK;
 }
@@ -583,6 +590,7 @@ void AutoBalancer::getTargetParameters()
       }
         std::cerr << "proc one tick : step 3" << std::endl;
       /* swg 編 */
+        std::cerr << "proc one tick : step 3" << std::endl;
       for (size_t i = 0; i < gg->get_swing_leg_coords_list_kuro().size(); i++) {
         sw_coords = coordinates(gg->get_swing_leg_coords_list_kuro()[i].pos,
                                 gg->get_swing_leg_coords_list_kuro()[i].rot);
@@ -1099,9 +1107,15 @@ bool AutoBalancer::setFootStepsWithParam(const OpenHRP::AutoBalancerService::Foo
 
 void AutoBalancer::waitFootSteps()
 {
-  //while (gg_is_walking) usleep(10);
-  while (gg_is_walking || !transition_interpolator->isEmpty() )
-    usleep(1000);
+    std::cerr << "waitFootSteps is called !!!" << std::endl;
+    //while (gg_is_walking) usleep(10);
+    std::cerr << "gg_is_walking : " << gg_is_walking << std::endl;
+    std::cerr << "transition_interpolator->isEmpty() : " << transition_interpolator->isEmpty() << std::endl;
+    while (gg_is_walking || !transition_interpolator->isEmpty() ) {
+        std::cerr << "aa" << std::endl;
+        usleep(1000);
+    }
+  std::cerr << "waitFootSteps is called  2222222222222222222222222222222222222222 !!!" << std::endl;
   usleep(1000);
   gg->set_offset_velocity_param(0,0,0);
 }
