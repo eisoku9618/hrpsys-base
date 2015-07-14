@@ -208,6 +208,9 @@ namespace rats
       case CYCLOIDDELAY:
         cycloid_delay_midcoords(ret, *it1, *it2, step_height);
         break;
+      case CYCLOIDDELAYKICK:
+        cycloid_delay_kick_midcoords(ret, *it1, *it2, step_height);
+        break;
       default: break;
       }
       if (std::fabs(step_height) > 1e-3*10) {
@@ -342,6 +345,14 @@ namespace rats
     cdtg.get_trajectory_point(ret.pos, hrp::Vector3(start.pos), hrp::Vector3(goal.pos), height);
   };
 
+  void leg_coords_generator::cycloid_delay_kick_midcoords (coordinates& ret, const coordinates& start,
+                                                                      const coordinates& goal, const double height)
+  {
+    mid_coords(ret, swing_rot_ratio, start, goal);
+    cdktg.set_start_rot(hrp::Matrix33(start.rot));
+    cdktg.get_trajectory_point(ret.pos, hrp::Vector3(start.pos), hrp::Vector3(goal.pos), height);
+  };
+
   void leg_coords_generator::update_leg_coords (const std::vector< std::vector<step_node> >& fnll_kuro, const double default_double_support_ratio)
   {
     if (!foot_ratio_interpolator->isEmpty()) {
@@ -392,6 +403,7 @@ namespace rats
       rdtg.reset(one_step_count, default_double_support_ratio);
       sdtg.reset(one_step_count, default_double_support_ratio);
       cdtg.reset(one_step_count, default_double_support_ratio);
+      cdktg.reset(one_step_count, default_double_support_ratio);      
       reset_foot_ratio_interpolator();
     }
   };

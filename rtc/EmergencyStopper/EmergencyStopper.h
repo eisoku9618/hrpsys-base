@@ -19,6 +19,8 @@
 #include <rtm/idl/ExtendedDataTypesSkel.h>
 #include <hrpModel/Body.h>
 #include "interpolator.h"
+#include "HRPDataTypes.hh"
+#include <queue>
 
 // Service implementation headers
 // <rtc-template block="service_impl_h">
@@ -99,6 +101,8 @@ public:
     // virtual RTC::ReturnCode_t onRateChanged(RTC::UniqueId ec_id);
     bool stopMotion();
     bool releaseMotion();
+    bool getEmergencyStopperParam(OpenHRP::EmergencyStopperService::EmergencyStopperParam& i_param);
+    bool setEmergencyStopperParam(const OpenHRP::EmergencyStopperService::EmergencyStopperParam& i_param);
 
 protected:
     // Configuration variable declaration
@@ -108,16 +112,22 @@ protected:
 
     TimedDoubleSeq m_qRef;
     TimedDoubleSeq m_q;
+    TimedLong m_emergencySignal;
+    TimedLong m_emergencyMode;
+    OpenHRP::TimedLongSeqSeq m_servoState;
 
     // DataInPort declaration
     // <rtc-template block="inport_declare">
     InPort<TimedDoubleSeq> m_qRefIn;
+    InPort<TimedLong> m_emergencySignalIn;
+    InPort<OpenHRP::TimedLongSeqSeq> m_servoStateIn;
   
     // </rtc-template>
 
     // DataOutPort declaration
     // <rtc-template block="outport_declare">
     OutPort<TimedDoubleSeq> m_qOut;
+    OutPort<TimedLong> m_emergencyModeOut;
   
     // </rtc-template>
 
@@ -143,13 +153,15 @@ private:
     double m_dt;
     unsigned int m_debugLevel;
     int dummy, loop;
-    bool is_stop_mode;
+    bool is_stop_mode, prev_is_stop_mode;
     bool is_initialized;
-    int recover_time;
+    int recover_time, retrieve_time;
     double recover_time_dt;
-    int default_recover_time;
-    double *m_recover_jointdata;
+    int default_recover_time, default_retrieve_time;
+    double *m_stop_posture;
     interpolator* m_interpolator;
+    std::queue<std::vector<double> > m_input_posture_queue;
+    int emergency_stopper_beep_count, emergency_stopper_beep_freq;
 };
 
 

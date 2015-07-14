@@ -52,11 +52,13 @@ Stabilizer::Stabilizer(RTC::Manager* manager)
     m_baseRpyIn("baseRpyIn", m_baseRpy),
     m_contactStatesIn("contactStates", m_contactStates),
     m_controlSwingSupportTimeIn("controlSwingSupportTime", m_controlSwingSupportTime),
+    m_qRefSeqIn("qRefSeq", m_qRefSeq),
     m_qRefOut("q", m_qRef),
     m_tauOut("tau", m_tau),
     m_zmpOut("zmp", m_zmp),
     m_actContactStatesOut("actContactStates", m_actContactStates),
     m_COPInfoOut("COPInfo", m_COPInfo),
+    m_emergencySignalOut("emergencySignal", m_emergencySignal),
     // for debug output
     m_originRefZmpOut("originRefZmp", m_originRefZmp),
     m_originRefCogOut("originRefCog", m_originRefCog),
@@ -75,6 +77,7 @@ Stabilizer::Stabilizer(RTC::Manager* manager)
     m_debugDataOut("debugData", m_debugData),
     control_mode(MODE_IDLE),
     st_algorithm(OpenHRP::StabilizerService::TPCC),
+    emergency_check_mode(OpenHRP::StabilizerService::NO_CHECK),
     szd(NULL),
     // </rtc-template>
     m_debugLevel(0)
@@ -108,6 +111,7 @@ RTC::ReturnCode_t Stabilizer::onInitialize()
   addInPort("baseRpyIn", m_baseRpyIn);
   addInPort("contactStates", m_contactStatesIn);
   addInPort("controlSwingSupportTime", m_controlSwingSupportTimeIn);
+  addInPort("qRefSeq", m_qRefSeqIn);
 
   // Set OutPort buffer
   addOutPort("q", m_qRefOut);
@@ -115,6 +119,7 @@ RTC::ReturnCode_t Stabilizer::onInitialize()
   addOutPort("zmp", m_zmpOut);
   addOutPort("actContactStates", m_actContactStatesOut);
   addOutPort("COPInfo", m_COPInfoOut);
+  addOutPort("emergencySignal", m_emergencySignalOut);
   // for debug output
   addOutPort("originRefZmp", m_originRefZmpOut);
   addOutPort("originRefCog", m_originRefCogOut);
@@ -270,6 +275,8 @@ RTC::ReturnCode_t Stabilizer::onInitialize()
   eefm_ee_pos_error_p_gain = 0;
   eefm_ee_rot_error_p_gain = 0;
   eefm_ee_error_cutoff_freq = 50.0; // [Hz]
+  cop_check_margin = 20.0*1e-3; // [m]
+  cp_check_margin = 60.0*1e-3; // [m]
 
   // parameters for RUNST
   double ke = 0, tc = 0;
@@ -290,6 +297,7 @@ RTC::ReturnCode_t Stabilizer::onInitialize()
       hrp::Sensor* sen= m_robot->sensor<hrp::ForceSensor>(stikp[i].sensor_name);
       if ( sen != NULL ) is_legged_robot = true;
   }
+  is_emergency = false;
 
   m_qCurrent.data.length(m_robot->numJoints());
   m_qRef.data.length(m_robot->numJoints());
@@ -430,11 +438,18 @@ RTC::ReturnCode_t Stabilizer::onExecute(RTC::UniqueId ec_id)
       stikp[i].localCOPPos = stikp[i].localp + stikp[i].localR * hrp::Vector3(m_limbCOPOffset[i].data.x, 0, m_limbCOPOffset[i].data.z);
     }
   }
+  if (m_qRefSeqIn.isNew()) {
+    m_qRefSeqIn.read();
+    is_seq_interpolating = true;
+  } else {
+    is_seq_interpolating = false;
+  }
 
   if (is_legged_robot) {
     getCurrentParameters();
     getTargetParameters();
     getActualParameters();
+    calcStateForEmergencySignal();
     switch (control_mode) {
     case MODE_IDLE:
       break;
@@ -515,6 +530,10 @@ RTC::ReturnCode_t Stabilizer::onExecute(RTC::UniqueId ec_id)
       m_debugDataOut.write();
     }
     m_qRefOut.write();
+    // emergencySignal
+    if (is_emergency) {
+        m_emergencySignalOut.write();
+    }
   }
 
   return RTC::RTC_OK;
@@ -953,6 +972,76 @@ bool Stabilizer::calcZMP(hrp::Vector3& ret_zmp, const double zmp_z)
   }
 };
 
+void Stabilizer::calcStateForEmergencySignal()
+{
+  // COP Check
+  bool is_cop_outside = false;
+  if (DEBUGP) {
+      std::cerr << "[" << m_profile.instance_name << "] Check Emergency State (seq = " << (is_seq_interpolating?"interpolating":"empty") << ")" << std::endl;
+  }
+  if (on_ground && transition_count == 0 && control_mode == MODE_ST) {
+    if (DEBUGP) {
+        std::cerr << "[" << m_profile.instance_name << "] COP check" << std::endl;
+    }
+    for (size_t i = 0; i < stikp.size(); i++) {
+      if (stikp[i].ee_name.find("leg") == std::string::npos) continue;
+      // check COP inside
+      if (m_COPInfo.data[i*3+2] > 20.0 ) {
+        hrp::Vector3 tmpcop(m_COPInfo.data[i*3+1]/m_COPInfo.data[i*3+2], m_COPInfo.data[i*3]/m_COPInfo.data[i*3+2], 0);
+        is_cop_outside = is_cop_outside ||
+            (!szd->is_inside_foot(tmpcop, stikp[i].ee_name=="lleg", cop_check_margin) ||
+             szd->is_front_of_foot(tmpcop, cop_check_margin) ||
+             szd->is_rear_of_foot(tmpcop, cop_check_margin));
+        if (DEBUGP) {
+            std::cerr << "[" << m_profile.instance_name << "]   [" << stikp[i].ee_name << "] "
+                      << "outside(" << !szd->is_inside_foot(tmpcop, stikp[i].ee_name=="lleg", cop_check_margin) << ") "
+                      << "front(" << szd->is_front_of_foot(tmpcop, cop_check_margin) << ") "
+                      << "rear(" << szd->is_rear_of_foot(tmpcop, cop_check_margin) << ")" << std::endl;
+        }
+      } else {
+        is_cop_outside = true;
+      }
+    }
+  } else {
+    is_cop_outside = false;
+  }
+  // CP Check
+  bool is_cp_outside = false;
+  if (on_ground && transition_count == 0 && control_mode == MODE_ST) {
+    hrp::Vector3 ref_cp = ref_cog + ref_cogvel/std::sqrt(eefm_gravitational_acceleration/ ref_cog(2));
+    hrp::Vector3 act_cp = act_cog + act_cogvel/std::sqrt(eefm_gravitational_acceleration/ act_cog(2));
+    hrp::Vector3 diff_cp = ref_cp - act_cp;
+    diff_cp(2) = 0.0;
+    if (DEBUGP) {
+        std::cerr << "[" << m_profile.instance_name << "] CP value " << diff_cp.norm() << std::endl;
+    }
+    // check CP inside
+    if (diff_cp.norm() > cp_check_margin) {
+      is_cp_outside = true;
+      std::cerr << "[" << m_profile.instance_name << "] CP too large error " << diff_cp.norm() << std::endl;
+    }
+  }
+  // Total check for emergency signal
+  switch (emergency_check_mode) {
+  case OpenHRP::StabilizerService::NO_CHECK:
+      is_emergency = false;
+      break;
+  case OpenHRP::StabilizerService::COP:
+      is_emergency = is_cop_outside && is_seq_interpolating;
+      break;
+  case OpenHRP::StabilizerService::CP:
+      is_emergency = is_cp_outside;
+      break;
+  default:
+      break;
+  }
+  if (DEBUGP) {
+      std::cerr << "[" << m_profile.instance_name << "] EmergencyCheck ("
+                << (emergency_check_mode == OpenHRP::StabilizerService::NO_CHECK?"NO_CHECK": (emergency_check_mode == OpenHRP::StabilizerService::COP?"COP":"CP") )
+                << ") " << (is_emergency?"emergency":"non-emergency") << std::endl;
+  }
+};
+
 void Stabilizer::calcTPCC() {
   if ( m_robot->numJoints() == m_qRef.data.length() ) {
 
@@ -1242,6 +1331,7 @@ void Stabilizer::getParameter(OpenHRP::StabilizerService::stParam& i_stp)
   i_stp.eefm_pos_transition_time = eefm_pos_transition_time;
   i_stp.eefm_pos_margin_time = eefm_pos_margin_time;
   i_stp.eefm_leg_inside_margin = szd->get_leg_inside_margin();
+  i_stp.eefm_leg_outside_margin = szd->get_leg_outside_margin();
   i_stp.eefm_leg_front_margin = szd->get_leg_front_margin();
   i_stp.eefm_leg_rear_margin = szd->get_leg_rear_margin();
   i_stp.eefm_cogvel_cutoff_freq = eefm_cogvel_cutoff_freq;
@@ -1264,6 +1354,8 @@ void Stabilizer::getParameter(OpenHRP::StabilizerService::stParam& i_stp)
   }
   i_stp.st_algorithm = st_algorithm;
   i_stp.transition_time = transition_time;
+  i_stp.cop_check_margin = cop_check_margin;
+  i_stp.cp_check_margin = cp_check_margin;
   switch(control_mode) {
   case MODE_IDLE: i_stp.controller_mode = OpenHRP::StabilizerService::MODE_IDLE; break;
   case MODE_AIR: i_stp.controller_mode = OpenHRP::StabilizerService::MODE_AIR; break;
@@ -1272,6 +1364,7 @@ void Stabilizer::getParameter(OpenHRP::StabilizerService::stParam& i_stp)
   case MODE_SYNC_TO_AIR: i_stp.controller_mode = OpenHRP::StabilizerService::MODE_SYNC_TO_AIR; break;
   default: break;
   }
+  i_stp.emergency_check_mode = emergency_check_mode;
 };
 
 void Stabilizer::setParameter(const OpenHRP::StabilizerService::stParam& i_stp)
@@ -1324,6 +1417,7 @@ void Stabilizer::setParameter(const OpenHRP::StabilizerService::stParam& i_stp)
   eefm_pos_transition_time = i_stp.eefm_pos_transition_time;
   eefm_pos_margin_time = i_stp.eefm_pos_margin_time;
   szd->set_leg_inside_margin(i_stp.eefm_leg_inside_margin);
+  szd->set_leg_outside_margin(i_stp.eefm_leg_outside_margin);
   szd->set_leg_front_margin(i_stp.eefm_leg_front_margin);
   szd->set_leg_rear_margin(i_stp.eefm_leg_rear_margin);
   szd->set_vertices_from_margin_params();
@@ -1344,6 +1438,8 @@ void Stabilizer::setParameter(const OpenHRP::StabilizerService::stParam& i_stp)
       }
   }
   transition_time = i_stp.transition_time;
+  cop_check_margin = i_stp.cop_check_margin;
+  cp_check_margin = i_stp.cp_check_margin;
   if (i_stp.foot_origin_offset.length () != 2) {
       std::cerr << "[" << m_profile.instance_name << "]   foot_origin_offset cannot be set. Length " << i_stp.foot_origin_offset.length() << " != " << 2 << std::endl;
   } else if (control_mode != MODE_IDLE) {
@@ -1384,11 +1480,16 @@ void Stabilizer::setParameter(const OpenHRP::StabilizerService::stParam& i_stp)
   std::cerr << "[" << m_profile.instance_name << "]  COMMON" << std::endl;
   if (control_mode == MODE_IDLE) {
     st_algorithm = i_stp.st_algorithm;
+    emergency_check_mode = i_stp.emergency_check_mode;
     std::cerr << "[" << m_profile.instance_name << "]   st_algorithm changed to [" << (st_algorithm == OpenHRP::StabilizerService::EEFM?"EEFM":(st_algorithm == OpenHRP::StabilizerService::EEFMQP?"EEFMQP":"TPCC")) << "]" << std::endl;
+    std::cerr << "[" << m_profile.instance_name << "]   emergency_check_mode changed to [" << (emergency_check_mode == OpenHRP::StabilizerService::NO_CHECK?"NO_CHECK": (emergency_check_mode == OpenHRP::StabilizerService::COP?"COP":"CP") ) << "]" << std::endl;
   } else {
     std::cerr << "[" << m_profile.instance_name << "]   st_algorithm cannot be changed to [" << (st_algorithm == OpenHRP::StabilizerService::EEFM?"EEFM":(st_algorithm == OpenHRP::StabilizerService::EEFMQP?"EEFMQP":"TPCC")) << "] during MODE_AIR or MODE_ST." << std::endl;
+    std::cerr << "[" << m_profile.instance_name << "]   emergency_check_mode cannot be changed to [" << (emergency_check_mode == OpenHRP::StabilizerService::NO_CHECK?"NO_CHECK": (emergency_check_mode == OpenHRP::StabilizerService::COP?"COP":"CP") ) << "] during MODE_AIR or MODE_ST." << std::endl;
   }
   std::cerr << "[" << m_profile.instance_name << "]  transition_time = " << transition_time << "[s]" << std::endl;
+  std::cerr << "[" << m_profile.instance_name << "]  cop_check_margin = " << cop_check_margin << "[m]" << std::endl;
+  std::cerr << "[" << m_profile.instance_name << "]  cp_check_margin = " << cp_check_margin << "[m]" << std::endl;
 }
 
 void Stabilizer::waitSTTransition()

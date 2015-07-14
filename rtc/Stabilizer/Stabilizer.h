@@ -110,6 +110,7 @@ class Stabilizer
   void sync_2_st ();
   void sync_2_idle();
   bool calcZMP(hrp::Vector3& ret_zmp, const double zmp_z);
+  void calcStateForEmergencySignal();
   void calcRUNST();
   void calcTPCC();
   void calcEEForceMomentControl();
@@ -148,6 +149,8 @@ class Stabilizer
   std::vector<RTC::TimedPoint3D> m_limbCOPOffset;
   RTC::TimedBooleanSeq m_actContactStates;
   RTC::TimedDoubleSeq m_COPInfo;
+  RTC::TimedLong m_emergencySignal;
+  RTC::TimedDoubleSeq m_qRefSeq;
   // for debug ouput
   RTC::TimedPoint3D m_originRefZmp, m_originRefCog, m_originRefCogVel, m_originNewZmp;
   RTC::TimedPoint3D m_originActZmp, m_originActCog, m_originActCogVel;
@@ -171,6 +174,7 @@ class Stabilizer
   RTC::InPort<RTC::TimedBooleanSeq> m_contactStatesIn;
   RTC::InPort<RTC::TimedDoubleSeq> m_controlSwingSupportTimeIn;
   std::vector<RTC::InPort<RTC::TimedPoint3D> *> m_limbCOPOffsetIn;
+  RTC::InPort<RTC::TimedDoubleSeq> m_qRefSeqIn;
 
   std::vector<RTC::TimedDoubleSeq> m_wrenches;
   std::vector<RTC::InPort<RTC::TimedDoubleSeq> *> m_wrenchesIn;
@@ -184,6 +188,7 @@ class Stabilizer
   RTC::OutPort<RTC::TimedPoint3D> m_zmpOut;
   RTC::OutPort<RTC::TimedBooleanSeq> m_actContactStatesOut;
   RTC::OutPort<RTC::TimedDoubleSeq> m_COPInfoOut;
+  RTC::OutPort<RTC::TimedLong> m_emergencySignalOut;
   // for debug output
   RTC::OutPort<RTC::TimedPoint3D> m_originRefZmpOut, m_originRefCogOut, m_originRefCogVelOut, m_originNewZmpOut;
   RTC::OutPort<RTC::TimedPoint3D> m_originActZmpOut, m_originActCogOut, m_originActCogVelOut;
@@ -239,7 +244,7 @@ class Stabilizer
   std::vector<bool> contact_states, prev_contact_states, is_ik_enable;
   double dt;
   int transition_count, loop;
-  bool is_legged_robot, on_ground;
+  bool is_legged_robot, on_ground, is_emergency, is_seq_interpolating;
   hrp::Vector3 current_root_p, target_root_p;
   hrp::Matrix33 current_root_R, target_root_R, prev_act_foot_origin_rot, prev_ref_foot_origin_rot, target_foot_origin_rot;
   std::vector <hrp::Vector3> target_ee_p, target_ee_diff_p, prev_target_ee_diff_p, target_ee_diff_r, prev_target_ee_diff_r;
@@ -267,7 +272,8 @@ class Stabilizer
   hrp::Vector3 ref_foot_force[2];
   hrp::Vector3 ref_foot_moment[2];
   hrp::Vector3 d_foot_pos[2], pos_ctrl;
-  double total_mass, transition_time;
+  double total_mass, transition_time, cop_check_margin, cp_check_margin;
+  OpenHRP::StabilizerService::EmergencyCheckMode emergency_check_mode;
 };
 
 
