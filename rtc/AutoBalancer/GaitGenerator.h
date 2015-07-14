@@ -21,8 +21,6 @@ namespace rats
 
     enum orbit_type {SHUFFLING, CYCLOID, RECTANGLE, STAIR, CYCLOIDDELAY, CYCLOIDDELAYKICK};
     enum leg_type {RLEG, LLEG, RARM, LARM, BOTH, ALL};
-    enum orbit_type {SHUFFLING, CYCLOID, RECTANGLE, STAIR, CYCLOIDDELAY,CYCLOIDDELAYKICK};
-    enum leg_type {RLEG, LLEG, BOTH};
 
     struct step_node
     {
