@@ -232,6 +232,7 @@ mid_rotのようにアルゴリズム的に2個を想定しているのは悩み
    - 確かめるには fix_rotもcurrent_foot_mid_rotも単位行列ではなくすればOK
    - fix_xxx : 足座標でのx軸単位ベクトルをworld相対で見て，かつ，z方向を0にして，正規化したもの
    - current_foot_mid_xxx : VRML-world相対のend-effectorの真ん中
+1. lcg.resetでswing_leg_dst_coordsとswing_leg_src_coordsの初期値を与えているが，proc_one_tickの中で呼ばれるlcg.update_leg_coordsではswing_leg_dst_coordsを上書きしている．初期値はどこで使われるの？
 
 ##### 興味
 1. current_root_p / target_root_p とかのrootLinkのpの取り扱い方がよくわからない．solveLimbIKでは何が起こっている？

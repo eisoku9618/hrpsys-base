@@ -188,6 +188,8 @@ namespace rats
   /* member function implementation for leg_coords_generator */
   void leg_coords_generator::calc_current_swing_leg_coords_list_kuro (std::vector<coordinates>& ret_list, const double step_height, const double _current_toe_angle, const double _current_heel_angle)
   {
+      std::cerr << "swing_leg_src_coords_list_kuro.size() : " << swing_leg_src_coords_list_kuro.size() << std::endl; /* 1 */
+      std::cerr << "swing_leg_dst_coords_list_kuro.size() : " << swing_leg_dst_coords_list_kuro.size() << std::endl; /* 3 */
     for (std::vector<coordinates>::iterator it1 = swing_leg_src_coords_list_kuro.begin(), it2 = swing_leg_dst_coords_list_kuro.begin();
          it1 != swing_leg_src_coords_list_kuro.end() && it2 != swing_leg_dst_coords_list_kuro.end();
          it1++, it2++) {
@@ -361,6 +363,11 @@ namespace rats
 
     // Get current swing coords, support coords, and support leg parameters
     size_t current_footstep_index = (footstep_index < fnll_kuro.size() - 1 ? footstep_index : fnll_kuro.size()-1);
+    /* koko */
+    std::cerr << "current_footstep_index : " << current_footstep_index << std::endl;
+    std::cerr << "fnll_kuro[current_footstep_index].size() : " << fnll_kuro[current_footstep_index].size() << std::endl;
+    std::cerr << "swing_leg_dst_coords_list_kuro.size() before clear: " << swing_leg_dst_coords_list_kuro.size() << std::endl; /* 2 */
+    swing_leg_dst_coords_list_kuro.clear();
     for (size_t i = 0; i < fnll_kuro[current_footstep_index].size(); i++) {
         swing_leg_dst_coords_list_kuro.push_back(fnll_kuro[current_footstep_index].at(i).worldcoords);
     }
@@ -378,6 +385,7 @@ namespace rats
     }
 
     calc_ratio_from_double_support_ratio(default_double_support_ratio);
+    swing_leg_coords_list_kuro.clear();
     calc_current_swing_leg_coords_list_kuro(swing_leg_coords_list_kuro, current_step_height, current_toe_angle, current_heel_angle);
     if ( 1 <= lcg_count ) {
       lcg_count--;

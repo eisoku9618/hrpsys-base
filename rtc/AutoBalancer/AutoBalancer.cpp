@@ -578,6 +578,8 @@ void AutoBalancer::getTargetParameters()
         std::cerr << "proc one tick : step 2" << std::endl;
       /* ここらへんでやりたいのは，localPosの座標変換をして，target_p0に保持したい．同じ目標点に対して，座標系が異なるという理由でクラス変数が2つあるイメージ？ */
       /* sup 編 */
+        std::cerr << "gg->get_support_leg_coords_list_kuro().size() : " << gg->get_support_leg_coords_list_kuro().size() << std::endl;
+        std::cerr << "gg->get_support_leg_list_kuro().size() : " << gg->get_support_leg_list_kuro().size() << std::endl;
       coordinates sp_coords, sw_coords, tmpc;
       for (size_t i = 0; i < gg->get_support_leg_coords_list_kuro().size(); i++) {
         sp_coords = coordinates(gg->get_support_leg_coords_list_kuro()[i].pos,
@@ -590,13 +592,18 @@ void AutoBalancer::getTargetParameters()
       }
         std::cerr << "proc one tick : step 3" << std::endl;
       /* swg 編 */
-        std::cerr << "proc one tick : step 3" << std::endl;
+        std::cerr << "gg->get_swing_leg_coords_list_kuro().size() : " << gg->get_swing_leg_coords_list_kuro().size() << std::endl;
+        std::cerr << "gg->get_swing_leg_list_kuro().size() : " << gg->get_swing_leg_list_kuro().size() << std::endl;
       for (size_t i = 0; i < gg->get_swing_leg_coords_list_kuro().size(); i++) {
+        std::cerr << "------------swg : step 0" << std::endl;
         sw_coords = coordinates(gg->get_swing_leg_coords_list_kuro()[i].pos,
                                 gg->get_swing_leg_coords_list_kuro()[i].rot);
+        std::cerr << "------------swg : step 1" << std::endl;
         coordinates(ikp[gg->get_swing_leg_list_kuro()[i]].localPos,
                     ikp[gg->get_swing_leg_list_kuro()[i]].localR).inverse_transformation(tmpc);
+        std::cerr << "------------swg : step 2" << std::endl;
         sw_coords.transform(tmpc);
+        std::cerr << "------------swg : step 3" << std::endl;
         ikp[gg->get_swing_leg_list_kuro()[i]].target_p0 = sw_coords.pos;
         ikp[gg->get_swing_leg_list_kuro()[i]].target_r0 = sw_coords.rot;
       }
