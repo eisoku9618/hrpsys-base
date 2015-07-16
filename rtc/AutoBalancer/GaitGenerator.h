@@ -980,7 +980,7 @@ namespace rats
       return convert_leg_type_list_to_string_list(l_r_list);
     };
     std::vector<std::string> get_support_leg_list_kuro() const { return convert_leg_type_list_to_string_list(lcg.get_support_leg_list_kuro());};
-    std::vector<std::string> get_swing_leg_list_kuro() const { return convert_leg_type_list_to_string_list(lcg.get_support_leg_list_kuro());};
+    std::vector<std::string> get_swing_leg_list_kuro() const { return convert_leg_type_list_to_string_list(lcg.get_swing_leg_list_kuro());};
     const std::vector<coordinates>& get_swing_leg_coords_list_kuro() const { return lcg.get_swing_leg_coords_list_kuro(); };
     const std::vector<coordinates>& get_support_leg_coords_list_kuro() const { return lcg.get_support_leg_coords_list_kuro(); };
     const std::vector<coordinates>& get_swing_leg_src_coords_list_kuro() const { return lcg.get_swing_leg_src_coords_list_kuro(); };
