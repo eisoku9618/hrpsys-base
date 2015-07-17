@@ -979,7 +979,7 @@ bool AutoBalancer::goPos(const double& x, const double& y, const double& th)
 {
     /* only biped */
   if ( !gg_is_walking && !is_stop_mode) {
-    gg->go_pos_param_2_footstep_list(x, y, th,
+    gg->go_pos_param_2_footstep_list_list_kuro(x, y, th,
                                      (y > 0 ? ikp["rleg"].target_end_coords : ikp["lleg"].target_end_coords),
                                      (y > 0 ? ikp["lleg"].target_end_coords : ikp["rleg"].target_end_coords),
                                      (y > 0 ? RLEG : LLEG));

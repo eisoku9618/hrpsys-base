@@ -8,8 +8,8 @@ set_target_properties(AutoBalancer PROPERTIES PREFIX "")
 # add_executable(testPreviewController testPreviewController.cpp ../ImpedanceController/RatsMatrix.cpp PreviewController.cpp)
 # target_link_libraries(testPreviewController ${libs})
 
-# add_executable(testGaitGenerator testGaitGenerator.cpp ../ImpedanceController/RatsMatrix.cpp PreviewController.cpp GaitGenerator.cpp ../SequencePlayer/interpolator.cpp)
-# target_link_libraries(testGaitGenerator ${libs})
+add_executable(testGaitGenerator testGaitGenerator.cpp ../ImpedanceController/RatsMatrix.cpp PreviewController.cpp GaitGenerator.cpp ../SequencePlayer/interpolator.cpp)
+target_link_libraries(testGaitGenerator ${libs})
 
 add_executable(AutoBalancerComp AutoBalancerComp.cpp ${comp_sources})
 target_link_libraries(AutoBalancerComp ${libs})
@@ -17,7 +17,7 @@ target_link_libraries(AutoBalancerComp ${libs})
 include_directories(${PROJECT_SOURCE_DIR}/rtc/SequencePlayer)
 
 # set(target AutoBalancer AutoBalancerComp testPreviewController testGaitGenerator)
-set(target AutoBalancer AutoBalancerComp)
+set(target AutoBalancer AutoBalancerComp testGaitGenerator)
 
 install(TARGETS ${target}
   RUNTIME DESTINATION bin CONFIGURATIONS Release Debug

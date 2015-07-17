@@ -508,7 +508,7 @@ namespace rats
    *  x, y and theta are simply divided by using stride params
    *  unit system -> x [mm], y [mm], theta [deg]
    */
-  void gait_generator::go_pos_param_2_footstep_list (const double goal_x, const double goal_y, const double goal_theta, /* [mm] [mm] [deg] */
+  void gait_generator::go_pos_param_2_footstep_list_list_kuro (const double goal_x, const double goal_y, const double goal_theta, /* [mm] [mm] [deg] */
                                        const coordinates& initial_support_coords, const coordinates& initial_swing_src_coords,
                                        const leg_type initial_support_leg)
   {
@@ -567,7 +567,7 @@ namespace rats
     print_footstep_list_list_kuro();
   };
 
-  void gait_generator::go_single_step_param_2_footstep_list (const double goal_x, const double goal_y, const double goal_z, const double goal_theta,
+  void gait_generator::go_single_step_param_2_footstep_list_list_kuro (const double goal_x, const double goal_y, const double goal_z, const double goal_theta,
                                                              const std::string& tmp_swing_leg,
                                                              const coordinates& _support_leg_coords)
   {
