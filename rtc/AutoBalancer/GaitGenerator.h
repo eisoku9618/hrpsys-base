@@ -691,7 +691,7 @@ namespace rats
         }
       };
       double get_default_step_height () const { return default_step_height;};
-      /* TODO */
+      /* biped only */
       void get_swing_support_mid_coords(coordinates& ret) const
       {
           coordinates tmp;

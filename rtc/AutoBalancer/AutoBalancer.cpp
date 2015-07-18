@@ -552,22 +552,20 @@ void AutoBalancer::getTargetParameters()
   if (control_mode != MODE_IDLE) {
     coordinates tmp_fix_coords;
     if (!zmp_interpolator->isEmpty()) {
-      /* only biped / default_zmp_offsets len : 12, default_zmp_offsets_output len : 6 */
-      double default_zmp_offsets_output[6];
+      double default_zmp_offsets_output[leg_names.size() * 3];
       zmp_interpolator->get(default_zmp_offsets_output, true);
-      for (size_t i = 0; i < 2; i++)
+      for (size_t i = 0; i < leg_names.size(); i++)
         for (size_t j = 0; j < 3; j++)
           default_zmp_offsets[i](j) = default_zmp_offsets_output[i*3+j];
       if (DEBUGP) {
         std::cerr << "[" << m_profile.instance_name << "] default_zmp_offsets (interpolated)" << std::endl;
-        std::cerr << "[" << m_profile.instance_name << "]   rleg = " << default_zmp_offsets[0].format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << "[m]" << std::endl;
-        std::cerr << "[" << m_profile.instance_name << "]   lleg = " << default_zmp_offsets[1].format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << "[m]" << std::endl;
+        for (size_t i = 0; i < leg_names.size(); i++)
+            std::cerr << "[" << m_profile.instance_name << "]   " << leg_names[i] << " = " << default_zmp_offsets[i].format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << "[m]" << std::endl;
       }
     }
     if ( gg_is_walking ) {
       gg->set_default_zmp_offsets(default_zmp_offsets);
       gg_solved = gg->proc_one_tick();
-      /* ここらへんでやりたいのは，localPosの座標変換をして，target_p0に保持したい．同じ目標点に対して，座標系が異なるという理由でクラス変数が2つあるイメージ？ */
       /* sup 編 */
       coordinates sp_coords, sw_coords, tmpc;
       for (size_t i = 0; i < gg->get_support_leg_coords_list_kuro().size(); i++) {
@@ -591,7 +589,7 @@ void AutoBalancer::getTargetParameters()
       }
       gg->get_swing_support_mid_coords(tmp_fix_coords);
       // TODO : assume biped
-      /* only biped */
+      /* only biped  : for で回してall-limbとleg_namesのdiffを見てtrue/falseを決める */
       switch (gg->get_current_support_state_list_kuro().front()) {
       case BOTH:
         m_contactStates.data[contact_states_index_map["rleg"]] = true;
@@ -610,7 +608,7 @@ void AutoBalancer::getTargetParameters()
         std::cerr << "maybe quad walk ... " << std::endl;
         break;
       }
-      /* only biped */
+      /* only biped : 同上 */
       m_controlSwingSupportTime.data[contact_states_index_map["rleg"]] = gg->get_current_swing_time(0);
       m_controlSwingSupportTime.data[contact_states_index_map["lleg"]] = gg->get_current_swing_time(1);
       /* tekito -> legのみのロボットが動かなくなる？*/
@@ -626,7 +624,8 @@ void AutoBalancer::getTargetParameters()
       m_limbCOPOffset[contact_states_index_map[gg->get_support_leg_list_kuro().front()]].data.y = gg->get_support_foot_zmp_offset_list_kuro().front()(1);
       m_limbCOPOffset[contact_states_index_map[gg->get_support_leg_list_kuro().front()]].data.z = gg->get_support_foot_zmp_offset_list_kuro().front()(2);
     } else {
-      tmp_fix_coords = fix_leg_coords;
+        /* only biped : if elseを追加して， else if leg_names.size() == 2 ならここ，的な？ */
+      tmp_fix_coords = fix_leg_coords; /* fix_leg_coordsがstart字の両足の真ん中座標系 : stopWalkingのときにセットされるっぽい */
       // double support by default
       m_contactStates.data[contact_states_index_map["rleg"]] = true;
       m_contactStates.data[contact_states_index_map["lleg"]] = true;
@@ -658,7 +657,7 @@ void AutoBalancer::getTargetParameters()
     }
     // Tempolarily modify tmp_fix_coords
     // This will be removed after seq outputs adequate waistRPY discussed in https://github.com/fkanehiro/hrpsys-base/issues/272
-    /* tmp_fix_coordsの回転が消されちゃうけど．． */
+    /* tmp_fix_coordsの回転が修正されて，水平になる．斜めブロックとかで影響が出てくるはずで，逆に横向きの斜めブロックでは影響が出ない．これは必要なのか聞く */
     {
       hrp::Vector3 ex = hrp::Vector3::UnitX();
       hrp::Vector3 ez = hrp::Vector3::UnitZ();
@@ -674,7 +673,7 @@ void AutoBalancer::getTargetParameters()
 
     /* update ref_forces ;; sp's absolute -> rmc's absolute */
     for (size_t i = 0; i < m_ref_forceIn.size(); i++) {
-      hrp::Matrix33 eeR;        /* rootLink相対のend-effectorの姿勢 */
+      hrp::Matrix33 eeR;
       hrp::Link* parentlink;
       hrp::ForceSensor* sensor = m_robot->sensor<hrp::ForceSensor>(sensor_names[i]);
       if (sensor) parentlink = sensor->link;
@@ -691,6 +690,7 @@ void AutoBalancer::getTargetParameters()
 
     target_root_p = m_robot->rootLink()->p;
     target_root_R = m_robot->rootLink()->R;
+    /* only biped : very important */
     for ( std::map<std::string, ABCIKparam>::iterator it = ikp.begin(); it != ikp.end(); it++ ) {
       if ( control_mode == MODE_IDLE || it->first.find("leg") == std::string::npos ) {
         it->second.target_p0 = it->second.target_link->p;
@@ -709,7 +709,6 @@ void AutoBalancer::getTargetParameters()
         tmp_foot_mid_pos += tmpikp.target_link->p + tmpikp.target_link->R * tmpikp.localPos + tmpikp.target_link->R * tmpikp.localR * default_zmp_offsets[i];
     }
     tmp_foot_mid_pos *= 0.5;
-
     //
     {
         if ( gg_is_walking && gg->get_lcg_count() == static_cast<size_t>(gg->get_default_step_time()/(2*m_dt))-1) {
@@ -814,10 +813,10 @@ void AutoBalancer::solveLimbIK ()
   m_robot->rootLink()->R = current_root_R;
   m_robot->calcForwardKinematics();
   hrp::Vector3 tmp_input_sbp = hrp::Vector3(0,0,0);
-  /* ref forceが0ならここはキニシナイくてOK．tmp_input_sbpには ref_cog がはいっている -> ホント？歩いている最中はdif_cog x/y が0じゃないみたい*/
+  /* ref forceが0ならここはキニシナイくてOK．tmp_input_sbpにはほぼ calcCM，zだけref_zmp(2)となる． */
   static_balance_point_proc_one(tmp_input_sbp, ref_zmp(2));
   hrp::Vector3 dif_cog = tmp_input_sbp - ref_cog;
-  dif_cog(2) = m_robot->rootLink()->p(2) - target_root_p(2); /* 0が入る.ここはどういうときに0でなくなるのか？ */
+  dif_cog(2) = m_robot->rootLink()->p(2) - target_root_p(2); /* 0が入る.ここはどういうときに0でなくなるのか？ ほぼ0 */
   m_robot->rootLink()->p = m_robot->rootLink()->p + -1 * move_base_gain * dif_cog;
   m_robot->rootLink()->R = target_root_R;
   // Fix for toe joint
