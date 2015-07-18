@@ -760,7 +760,11 @@ namespace rats
     enum emergency_flag { IDLING, EMERGENCY_STOP, STOPPING };
 
     /* member variables for gait_generator */
+    // Footstep list to be executed
+    //   First and last footstep are used for double support phase.
     std::vector< std::vector<step_node> > footstep_node_list_list_kuro;
+    // Footstep list for overwriting future footstep queue
+    std::vector< std::vector<step_node> > overwrite_footstep_node_list_list_kuro;
     toe_heel_phase_counter thp;
     refzmp_generator rg;
     leg_coords_generator lcg;
@@ -806,7 +810,7 @@ namespace rats
                     /* arguments for footstep_parameter */
                     const std::vector<hrp::Vector3>& _leg_pos,
                     const double _stride_fwd_x, const double _stride_y, const double _stride_theta, const double _stride_bwd_x)
-      : footstep_node_list_list_kuro(), thp(), rg(&thp, _dt), lcg(_dt, &thp),
+        : footstep_node_list_list_kuro(), overwrite_footstep_node_list_list_kuro(), thp(), rg(&thp, _dt), lcg(_dt, &thp),
         footstep_param(_leg_pos, _stride_fwd_x, _stride_y, _stride_theta, _stride_bwd_x),
         vel_param(), offset_vel_param(), cog(hrp::Vector3::Zero()), refzmp(hrp::Vector3::Zero()), prev_que_rzmp(hrp::Vector3::Zero()),
         /* swing_foot_zmp_offset_list_kuro(std::vector<hrp::Vector3>{hrp::Vector3::Zero()}), prev_que_sfzo_list_kuro(std::vector<hrp::Vector3>{hrp::Vector3::Zero()}), */
@@ -845,7 +849,10 @@ namespace rats
       }
       footstep_node_list_list_kuro.push_back(tmp_snl);
     };
-    void clear_footstep_node_list_list_kuro () { footstep_node_list_list_kuro.clear(); };
+    void clear_footstep_node_list_list_kuro () {
+        footstep_node_list_list_kuro.clear();
+        overwrite_footstep_node_list_list_kuro.clear();
+    };
     /* only biped */
     void go_pos_param_2_footstep_list_list_kuro (const double goal_x, const double goal_y, const double goal_theta, /* [mm] [mm] [deg] */
                                        const coordinates& initial_support_coords, const coordinates& initial_swing_src_coords,
@@ -860,11 +867,15 @@ namespace rats
     void finalize_velocity_mode ();
     void append_finalize_footstep ()
     {
-      std::vector<step_node> snl_kuro = footstep_node_list_list_kuro[footstep_node_list_list_kuro.size()-2];
+      append_finalize_footstep(footstep_node_list_list_kuro);
+    };
+    void append_finalize_footstep (std::vector< std::vector<step_node> >& _footstep_node_list_list_kuro)
+    {
+        std::vector<step_node> snl_kuro = _footstep_node_list_list_kuro[_footstep_node_list_list_kuro.size()-2];
       for (size_t i = 0; i < snl_kuro.size(); i++) {
           snl_kuro.at(i).step_height = snl_kuro.at(i).toe_angle = snl_kuro.at(i).heel_angle = 0.0;
       }
-      footstep_node_list_list_kuro.push_back(snl_kuro);
+      _footstep_node_list_list_kuro.push_back(snl_kuro);
     };
     void emergency_stop ()
     {
@@ -920,13 +931,24 @@ namespace rats
         append_finalize_footstep();
         print_footstep_list_list_kuro();
     };
-    void print_footstep_list_list_kuro () const
+    void set_overwrite_foot_steps (const std::vector< std::vector<step_node> >& fnll_kuro)
     {
-        for (size_t i = 0; i < footstep_node_list_list_kuro.size(); i++) {
-            for (size_t j = 0; j < footstep_node_list_list_kuro.at(i).size(); j++) {
-                std::cerr << footstep_node_list_list_kuro.at(i).at(j) << std::endl;
+        overwrite_footstep_node_list_list_kuro.clear();
+        overwrite_footstep_node_list_list_kuro = fnll_kuro;
+        append_finalize_footstep(overwrite_footstep_node_list_list_kuro);
+        print_footstep_list_list_kuro(overwrite_footstep_node_list_list_kuro);
+    };
+    void print_footstep_list_list_kuro (const std::vector< std::vector<step_node> > _footstep_node_list_list_kuro) const
+    {
+        for (size_t i = 0; i < _footstep_node_list_list_kuro.size(); i++) {
+            for (size_t j = 0; j < _footstep_node_list_list_kuro.at(i).size(); j++) {
+                std::cerr << _footstep_node_list_list_kuro.at(i).at(j) << std::endl;
             }
         }
+    };
+    void print_footstep_list_list_kuro () const
+    {
+      print_footstep_list_list_kuro(footstep_node_list_list_kuro);
     };
     /* parameter getting */
     const hrp::Vector3& get_cog () { return cog; };
