@@ -1034,7 +1034,7 @@ bool AutoBalancer::releaseEmergencyStop ()
   return true;
 }
 
-bool AutoBalancer::setFootSteps(const OpenHRP::AutoBalancerService::FootstepSequence& fs)
+bool AutoBalancer::setFootSteps(const OpenHRP::AutoBalancerService::FootstepSequence& fs, CORBA::Long overwrite_fs_idx)
 {
   OpenHRP::AutoBalancerService::StepParamSequence sps;
   sps.length(fs.length());
@@ -1044,10 +1044,10 @@ bool AutoBalancer::setFootSteps(const OpenHRP::AutoBalancerService::FootstepSequ
   for (size_t i = 0; i < sps.length(); i++) sps[i].step_time = gg->get_default_step_time();
   for (size_t i = 0; i < sps.length(); i++) sps[i].toe_angle = ((!gg_is_walking && i==0) ? 0.0 : gg->get_toe_angle());
   for (size_t i = 0; i < sps.length(); i++) sps[i].heel_angle = ((!gg_is_walking && i==0) ? 0.0 : gg->get_heel_angle());
-  setFootStepsWithParam(fs, sps);
+  setFootStepsWithParam(fs, sps, overwrite_fs_idx);
 }
 
-bool AutoBalancer::setFootStepsWithParam(const OpenHRP::AutoBalancerService::FootstepSequence& fs, const OpenHRP::AutoBalancerService::StepParamSequence& sps)
+bool AutoBalancer::setFootStepsWithParam(const OpenHRP::AutoBalancerService::FootstepSequence& fs, const OpenHRP::AutoBalancerService::StepParamSequence& sps, CORBA::Long overwrite_fs_idx)
 {
   if (!is_stop_mode) {
     std::cerr << "[" << m_profile.instance_name << "] setFootSteps" << std::endl;
@@ -1055,12 +1055,13 @@ bool AutoBalancer::setFootStepsWithParam(const OpenHRP::AutoBalancerService::Foo
     // Initial footstep Snapping
     coordinates tmpfs, initial_support_coords, initial_input_coords, fstrans;
     if (gg_is_walking) {
-        if (boost::assign::list_of<std::string>(std::string(fs[0].leg)) == gg->get_support_leg_list_kuro()) {
-            // Snap initial footstep to current support leg coords
-            initial_support_coords = gg->get_support_leg_coords_list_kuro().front();
-        } else {
-            // Pass current support leg coords and snap initial footstep to next support leg coords (= current swing leg dst coords)
-            initial_support_coords = gg->get_swing_leg_dst_coords_list_kuro().front();
+        if (overwrite_fs_idx <= 0) {
+            std::cerr << "[" << m_profile.instance_name << "]   Invalid overwrite index = " << overwrite_fs_idx << std::endl;
+            return false;
+        }
+        if (!gg->get_footstep_coords_by_index(initial_support_coords, overwrite_fs_idx-1)) {
+            std::cerr << "[" << m_profile.instance_name << "]   Invalid overwrite index = " << overwrite_fs_idx << std::endl;
+            return false;
         }
     } else {
         // If walking, snap initial leg to current ABC foot coords.
@@ -1072,7 +1073,6 @@ bool AutoBalancer::setFootStepsWithParam(const OpenHRP::AutoBalancerService::Foo
     // Get footsteps
     std::vector<coordinates> fs_vec;
     std::vector<std::string> leg_name_vec;
-    std::string prev_leg(std::string(fs[0].leg) == "rleg"?"lleg":"rleg");
     for (size_t i = 0; i < fs.length(); i++) {
       std::string leg(fs[i].leg);
       if (leg == "rleg" || leg == "lleg") {
@@ -1083,7 +1083,6 @@ bool AutoBalancer::setFootStepsWithParam(const OpenHRP::AutoBalancerService::Foo
         tmpfs.transform(fstrans);
         leg_name_vec.push_back(leg);
         fs_vec.push_back(tmpfs);
-        prev_leg = leg;
       } else {
           std::cerr << "[" << m_profile.instance_name << "]   No such target : " << leg << std::endl;
         return false;
@@ -1096,11 +1095,13 @@ bool AutoBalancer::setFootStepsWithParam(const OpenHRP::AutoBalancerService::Foo
     std::cerr << "[" << m_profile.instance_name << "] print footsteps " << std::endl;
     std::vector< std::vector<step_node> > fnll_kuro;
     for (size_t i = 0; i < fs_vec.size(); i++) {
-        fnll_kuro.push_back(boost::assign::list_of(step_node(leg_name_vec[i], fs_vec[i], sps[i].step_height, sps[i].step_time, sps[i].toe_angle, sps[i].heel_angle)));
+        if (!(gg_is_walking && i == 0)) // If initial footstep, e.g., not walking, pass user-defined footstep list. If walking, pass cdr footsteps in order to neglect initial double support leg.
+            fnll_kuro.push_back(boost::assign::list_of(step_node(leg_name_vec[i], fs_vec[i], sps[i].step_height, sps[i].step_time, sps[i].toe_angle, sps[i].heel_angle)));
     }
     if (gg_is_walking) {
         std::cerr << "[" << m_profile.instance_name << "]  Set overwrite footsteps" << std::endl;
         gg->set_overwrite_foot_steps(fnll_kuro); /* todo */
+        gg->set_overwrite_foot_step_index(overwrite_fs_idx);
     } else {
         std::cerr << "[" << m_profile.instance_name << "]  Set normal footsteps" << std::endl;
         gg->set_foot_steps_list_kuro(fnll_kuro);
@@ -1410,12 +1411,13 @@ bool AutoBalancer::adjustFootSteps(const OpenHRP::AutoBalancerService::Footstep&
 };
 
 /* only biped */
-bool AutoBalancer::getRemainingFootstepSequence(OpenHRP::AutoBalancerService::FootstepSequence_out o_footstep)
+bool AutoBalancer::getRemainingFootstepSequence(OpenHRP::AutoBalancerService::FootstepSequence_out o_footstep, CORBA::Long& o_current_fs_idx)
 {
     std::cerr << "[" << m_profile.instance_name << "] getRemainingFootstepSequence" << std::endl;
     o_footstep = new OpenHRP::AutoBalancerService::FootstepSequence;
     if (gg_is_walking) {
       std::vector< std::vector<step_node> > fsll_kuro = gg->get_remaining_footstep_list_list_kuro();
+        o_current_fs_idx = gg->get_footstep_index();
         o_footstep->length(fsll_kuro.size());
         for (size_t i = 0; i < fsll_kuro.size(); i++) {
           o_footstep[i].leg = (fsll_kuro[i].front().l_r==RLEG?"rleg":"lleg");

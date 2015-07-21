@@ -459,9 +459,8 @@ namespace rats
     /* only biped */
     bool solved = preview_controller_ptr->update(refzmp, cog, swing_foot_zmp_offset_list_kuro.front(), rzmp, sfzo_list_kuro.front(), (refzmp_exist_p || finalize_count < preview_controller_ptr->get_delay()-default_step_time/dt));
     /* update refzmp */
-    if ( lcg.get_footstep_index() > 0 &&
-         lcg.get_lcg_count() == static_cast<size_t>(footstep_node_list_list_kuro[lcg.get_footstep_index()][0].step_time/dt * 0.5) - 1 ) { // Almost middle of step time
-      if (velocity_mode_flg != VEL_IDLING) {
+    if ( lcg.get_lcg_count() == static_cast<size_t>(footstep_node_list_list_kuro[lcg.get_footstep_index()][0].step_time/dt * 0.5) - 1 ) { // Almost middle of step time
+      if (velocity_mode_flg != VEL_IDLING && lcg.get_footstep_index() > 0) {
         std::vector< std::vector<coordinates> > cv;
         calc_next_coords_velocity_mode(cv, lcg.get_footstep_index() + 1);
         if (velocity_mode_flg == VEL_ENDING) velocity_mode_flg = VEL_IDLING;
@@ -475,10 +474,12 @@ namespace rats
         overwrite_footstep_node_list_list_kuro.push_back(boost::assign::list_of(step_node(cur_leg.front()==RLEG?LLEG:RLEG, cv[2][0], lcg.get_default_step_height(), default_step_time, lcg.get_toe_angle(), lcg.get_heel_angle())));
         overwrite_refzmp_queue(overwrite_footstep_node_list_list_kuro);
         overwrite_footstep_node_list_list_kuro.clear();
-      } else if (!overwrite_footstep_node_list_list_kuro.empty() && (lcg.get_footstep_index() < footstep_node_list_list_kuro.size()-1) ) { // If overwrite_footstep_node_list is specified and current footstep is not last footstep.
+      } else if ( !overwrite_footstep_node_list_list_kuro.empty() && // If overwrite_footstep_node_list exists
+                  (lcg.get_footstep_index() < footstep_node_list_list_kuro.size()-1) &&  // If overwrite_footstep_node_list is specified and current footstep is not last footstep.
+                  get_overwritable_index() == overwrite_footstep_index ) {
         overwrite_refzmp_queue(overwrite_footstep_node_list_list_kuro);
         overwrite_footstep_node_list_list_kuro.clear();
-      } else if (emergency_flg == EMERGENCY_STOP) {
+      } else if (emergency_flg == EMERGENCY_STOP && lcg.get_footstep_index() > 0) {
         leg_type cur_leg = footstep_node_list_list_kuro[lcg.get_footstep_index()].front().l_r;
         overwrite_footstep_node_list_list_kuro.push_back(boost::assign::list_of(step_node(cur_leg==RLEG?LLEG:RLEG, footstep_node_list_list_kuro[lcg.get_footstep_index()-1].front().worldcoords, 0, default_step_time, 0, 0)));
         overwrite_footstep_node_list_list_kuro.push_back(boost::assign::list_of(step_node(cur_leg, footstep_node_list_list_kuro[lcg.get_footstep_index()].front().worldcoords, 0, default_step_time, 0, 0)));
@@ -682,7 +683,7 @@ namespace rats
   void gait_generator::overwrite_refzmp_queue(const std::vector< std::vector<step_node> >& fnll_kuro)
   {
     /* clear footstep and refzmp after footstep_index + 1, it means we do not modify current step */
-    size_t idx = lcg.get_footstep_index() + 1;
+    size_t idx = get_overwritable_index();
     footstep_node_list_list_kuro.erase(footstep_node_list_list_kuro.begin()+idx, footstep_node_list_list_kuro.end());
 
     /* add new next steps ;; the number of next steps is fnl.size() */

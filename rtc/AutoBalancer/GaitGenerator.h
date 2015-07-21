@@ -777,6 +777,9 @@ namespace rats
     double default_double_support_ratio, default_double_support_static_ratio;
     double gravitational_acceleration;
     size_t finalize_count, optional_go_pos_finalize_footstep_num;
+    // overwrite_footstep_index is used for footstep overwriting.
+    //   When overwrite_footstep_index == get_overwritable_index(), overwrite footsteps after overwrite_footstep_index.
+    size_t overwrite_footstep_index;
     velocity_mode_flag velocity_mode_flg;
     emergency_flag emergency_flg;
     bool use_inside_step_limitation;
@@ -815,7 +818,7 @@ namespace rats
         vel_param(), offset_vel_param(), cog(hrp::Vector3::Zero()), refzmp(hrp::Vector3::Zero()), prev_que_rzmp(hrp::Vector3::Zero()),
         /* swing_foot_zmp_offset_list_kuro(std::vector<hrp::Vector3>{hrp::Vector3::Zero()}), prev_que_sfzo_list_kuro(std::vector<hrp::Vector3>{hrp::Vector3::Zero()}), */
         dt(_dt), default_step_time(1.0), default_double_support_ratio(0.2), default_double_support_static_ratio(0.0), gravitational_acceleration(DEFAULT_GRAVITATIONAL_ACCELERATION),
-        finalize_count(0), optional_go_pos_finalize_footstep_num(0),
+        finalize_count(0), optional_go_pos_finalize_footstep_num(0), overwrite_footstep_index(0),
         velocity_mode_flg(VEL_IDLING), emergency_flg(IDLING),
         use_inside_step_limitation(true),
         preview_controller_ptr(NULL) {
@@ -852,6 +855,7 @@ namespace rats
     void clear_footstep_node_list_list_kuro () {
         footstep_node_list_list_kuro.clear();
         overwrite_footstep_node_list_list_kuro.clear();
+        overwrite_footstep_index = 0;
     };
     /* only biped */
     void go_pos_param_2_footstep_list_list_kuro (const double goal_x, const double goal_y, const double goal_theta, /* [mm] [mm] [deg] */
@@ -937,6 +941,28 @@ namespace rats
         overwrite_footstep_node_list_list_kuro = fnll_kuro;
         append_finalize_footstep(overwrite_footstep_node_list_list_kuro);
         print_footstep_list_list_kuro(overwrite_footstep_node_list_list_kuro);
+    };
+    size_t get_overwritable_index ()
+    {
+        return lcg.get_footstep_index()+1;
+    };
+    bool set_overwrite_foot_step_index (const size_t idx)
+    {
+        if (idx >= get_overwritable_index()) {
+            overwrite_footstep_index = idx;
+            return true;
+        } else {
+            return false;
+        }
+    };
+      bool get_footstep_coords_by_index (coordinates& cs, const size_t idx)
+    {
+        if (footstep_node_list_list_kuro.size()-1 >= idx) {
+            cs = footstep_node_list_list_kuro[idx].front().worldcoords;
+            return true;
+        } else {
+            return false;
+        }
     };
     void print_footstep_list_list_kuro (const std::vector< std::vector<step_node> > _footstep_node_list_list_kuro) const
     {
@@ -1036,20 +1062,7 @@ namespace rats
     double get_default_double_support_static_ratio () const { return default_double_support_static_ratio; };
     std::vector< std::vector<step_node> > get_remaining_footstep_list_list_kuro ()
     {
-        /* kokomade */
       std::vector< std::vector<step_node> > fsll_kuro;
-      // fsl[0] is current support leg coords
-      std::vector<coordinates> tmp_list(lcg.get_support_leg_coords_list_kuro());
-      std::vector<coordinates>::iterator it_sup = tmp_list.begin();
-      std::vector<leg_type>::iterator it_l_r = lcg.get_support_leg_list_kuro().begin();
-      std::vector<step_node> fsl;
-      for ( ; it_sup != lcg.get_support_leg_coords_list_kuro().end() &&
-              it_l_r != lcg.get_support_leg_list_kuro().end();
-            it_sup++, it_l_r++) {
-        fsl.push_back(step_node(*it_l_r, *it_sup, 0, 0, 0, 0));
-      }
-      fsll_kuro.push_back(fsl);
-      // step_height, step_time and toe_heel_angle are dummy
       size_t fsl_size = (footstep_node_list_list_kuro.size()>lcg.get_footstep_index() ? footstep_node_list_list_kuro.size()-lcg.get_footstep_index() : 0);
       // The rest of fsl are swing dst coords from now.
       for (size_t i = 0; i < fsl_size; i++) {
