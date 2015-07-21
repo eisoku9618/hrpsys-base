@@ -60,7 +60,7 @@ namespace rats
     hrp::dvector f;
     std::deque<Eigen::Matrix<double, 2, 1> > p;
     std::deque<double> pz;
-    std::deque<hrp::Vector3> qdata;
+    std::deque<hrp::Vector3> qdata; /* preview_controllerの引数にswing_zmp_offsetがあるのは，かかとを使った歩行のとき用で，まわりまわってqdataにその値は保持される．難しいことは考えなくてよくて，ここの型をvectorに変えれば良い */
     double zmp_z, cog_z;
     size_t delay, ending_count;
     virtual void calc_f() = 0;

@@ -658,6 +658,8 @@ void AutoBalancer::getTargetParameters()
     // Tempolarily modify tmp_fix_coords
     // This will be removed after seq outputs adequate waistRPY discussed in https://github.com/fkanehiro/hrpsys-base/issues/272
     /* tmp_fix_coordsの回転が修正されて，水平になる．斜めブロックとかで影響が出てくるはずで，逆に横向きの斜めブロックでは影響が出ない．これは必要なのか聞く */
+    /* ここはかなり大事で，これがないと腰を曲げたりしたときにfixLegToCoordsが上手く動かない */
+    /* コメントアウトしてみたら分かる by 野沢さん */
     {
       hrp::Vector3 ex = hrp::Vector3::UnitX();
       hrp::Vector3 ez = hrp::Vector3::UnitZ();
@@ -691,6 +693,9 @@ void AutoBalancer::getTargetParameters()
     target_root_p = m_robot->rootLink()->p;
     target_root_R = m_robot->rootLink()->R;
     /* only biped : very important */
+    /* ここはstartAutoBalancerのrleg lleg rarm larm のようにしていれた状態で，台車押しながら歩くときに効いてくるところ */
+    /* 上記のようにabcをいれると，is_activeが全部trueになって，solveLimbIKが腕も呼ばれる */
+    /* ので，下があると，seqから来たangle-vectorを目標値にしてikを解いてくれる */
     for ( std::map<std::string, ABCIKparam>::iterator it = ikp.begin(); it != ikp.end(); it++ ) {
       if ( control_mode == MODE_IDLE || it->first.find("leg") == std::string::npos ) {
         it->second.target_p0 = it->second.target_link->p;
