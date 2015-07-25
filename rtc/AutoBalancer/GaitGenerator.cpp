@@ -457,7 +457,7 @@ namespace rats
       prev_que_sfzos = sfzos;
     }
     /* only biped */
-    bool solved = preview_controller_ptr->update(refzmp, cog, swing_foot_zmp_offsets.front(), rzmp, sfzos.front(), (refzmp_exist_p || finalize_count < preview_controller_ptr->get_delay()-default_step_time/dt));
+    bool solved = preview_controller_ptr->update(refzmp, cog, swing_foot_zmp_offsets, rzmp, sfzos, (refzmp_exist_p || finalize_count < preview_controller_ptr->get_delay()-default_step_time/dt));
     /* update refzmp */
     if ( lcg.get_lcg_count() == static_cast<size_t>(footstep_nodes_list[lcg.get_footstep_index()][0].step_time/dt * 0.5) - 1 ) { // Almost middle of step time
       if (velocity_mode_flg != VEL_IDLING && lcg.get_footstep_index() > 0) {
@@ -720,7 +720,7 @@ namespace rats
     while (not_solved) {
       bool refzmp_exist_p = rg.get_current_refzmp(rzmp, sfzos, default_double_support_ratio, default_double_support_static_ratio);
       /* only biped */
-      not_solved = !preview_controller_ptr->update(refzmp, cog, swing_foot_zmp_offsets[0], rzmp, sfzos[0], refzmp_exist_p);
+      not_solved = !preview_controller_ptr->update(refzmp, cog, swing_foot_zmp_offsets, rzmp, sfzos, refzmp_exist_p);
       rg.update_refzmp(footstep_nodes_list);
     }
   };
