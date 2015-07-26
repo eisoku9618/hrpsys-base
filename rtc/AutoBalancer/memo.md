@@ -137,6 +137,7 @@ tmpR                 : fix_rot * current_foot_mid_rot.transpose()
 
 1. preview controller に swing zmp offset が入っているが，なぜか．N脚のときはどうすればいいか相談．
    - つま先だちするときに，zmp_offsetを使ってつま先の先端にCOPをもっていきたくて，そのために，preview_controlにzmp_offsetを渡したいから
+   - done
 1. getTargetParametersでtmp_fix_coordsのrotを修正しているのはなぜか．
    - これがないとfixLegToCoordsが動かない．腰を曲げたときにも動いているのはこいつのおかげ．コメントアウトして見てみると良い．
 1. // m_ref_force frame : world frame ではなく // m_ref_force frame : current world frame な気がする．tmp_fix_coords.rotが現在の両足end-coordsの真ん中なので．
@@ -148,6 +149,11 @@ tmpR                 : fix_rot * current_foot_mid_rot.transpose()
    - そこまでいっていないから聞かなかった
 1. lcg.resetでswing_leg_dst_coordsとswing_leg_src_coordsの初期値を与えているが，proc_one_tickの中で呼ばれるlcg.update_leg_coordsではswing_leg_dst_coordsを上書きしている．初期値はどこで使われるの？
    - 最初の一歩で使われている．
+
+---
+
+1. inside step limitationでやりたいことの左右が反転してる？
+   - 自己解決．反転していなくて，合っている．なぜならsnは支持脚で，動かすのは逆足だから．
 
 ### TODO
 
