@@ -170,3 +170,11 @@ mid_rotのようにアルゴリズム的に2個を想定しているのは悩み
 
 
 
+### できていること
+
+- append_go_pos_step_nodes (const coordinates& _ref_coords, const std::vector<leg_type>& lts) で複数の足をfoot_stepnodes_listに入れることができるようになった．
+
+### できていないこと
+
+- goPos的な何かでcrawl歩行か何かが出来れば良さそう
+   - goPosをローカルで改造して4足歩行のikを解き始める段階まで行くのが最初のステップ
