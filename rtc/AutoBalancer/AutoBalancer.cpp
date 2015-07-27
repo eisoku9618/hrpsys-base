@@ -161,8 +161,8 @@ RTC::ReturnCode_t AutoBalancer::onInitialize()
       std::cerr << "[" << m_profile.instance_name << "] abc_leg_offset = " << leg_offset.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << "[m]" << std::endl;
       leg_pos.push_back(hrp::Vector3(-1*leg_offset));
       leg_pos.push_back(hrp::Vector3(leg_offset));
-      leg_pos.push_back(hrp::Vector3::Zero());
-      leg_pos.push_back(hrp::Vector3::Zero());
+      leg_pos.push_back(hrp::Vector3(0.45, -0.35, 0.0));
+      leg_pos.push_back(hrp::Vector3(0.45, +0.35, 0.0));
     }
     leg_names.push_back("rleg");
     leg_names.push_back("lleg");
