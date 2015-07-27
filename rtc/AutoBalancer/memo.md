@@ -176,5 +176,25 @@ mid_rotのようにアルゴリズム的に2個を想定しているのは悩み
 
 ### できていないこと
 
+- gait_generator::go_pos_param_2_footstep_nodes_listの中でstart_ref_coordsをどう決めるか．ここが二足だと両足の真ん中となっているが，Nきゃくの時はどうするべきか．ここさえ決まればあとは何もしなくてもN脚できるのでは
+- たぶんだけど，biped / crawl / trot / gallop とかを考えると，一般にstart_ref_coordsを決めるのは難しそうなので，関数の引数として与えてあげるのが良さそう．
+- start_ref_coordsは両足の真ん中になっている必要があって，なぜかというと，leg_posがそれ基準だから．
+
+
+### 構想
 - goPos的な何かでcrawl歩行か何かが出来れば良さそう
    - goPosをローカルで改造して4足歩行のikを解き始める段階まで行くのが最初のステップ
+
+- AutoBalancer::goPos(const double& x, const double& y, const double& th)
+   - 入力は一般性あり
+   - 内部の以下の部分で2脚歩行に限定している．ココさえ変えればいける？
+gg->go_pos_param_2_footstep_nodes_list(x, y, th,
+                                     (y > 0 ? ikp["rleg"].target_end_coords : ikp["lleg"].target_end_coords),
+                                     (y > 0 ? ikp["lleg"].target_end_coords : ikp["rleg"].target_end_coords),
+                                     (y > 0 ? RLEG : LLEG))
+
+- gait_generator::go_pos_param_2_footstep_nodes_list (const double goal_x, const double goal_y, const double goal_theta, /* [mm] [mm] [deg] */
+                                                           const coordinates& initial_support_coords, const coordinates& initial_swing_src_coords,
+                                                           const leg_type initial_support_leg)
+   - 入力が二脚前提になっているのでココを変える？
+   - 
