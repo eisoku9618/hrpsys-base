@@ -180,7 +180,6 @@ mid_rotのようにアルゴリズム的に2個を想定しているのは悩み
 - たぶんだけど，biped / crawl / trot / gallop とかを考えると，一般にstart_ref_coordsを決めるのは難しそうなので，関数の引数として与えてあげるのが良さそう．
 - start_ref_coordsは両足の真ん中になっている必要があって，なぜかというと，leg_posがそれ基準だから．
 
-
 ### 構想
 - goPos的な何かでcrawl歩行か何かが出来れば良さそう
    - goPosをローカルで改造して4足歩行のikを解き始める段階まで行くのが最初のステップ
@@ -198,3 +197,7 @@ gg->go_pos_param_2_footstep_nodes_list(x, y, th,
                                                            const leg_type initial_support_leg)
    - 入力が二脚前提になっているのでココを変える？
    - 
+
+#### 野沢さんに聞きたいこ2
+
+- initialize_gait_parameterの最初の方で，一歩目を上書きしているのはなぜ？
