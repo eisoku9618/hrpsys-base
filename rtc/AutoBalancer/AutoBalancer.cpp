@@ -161,8 +161,8 @@ RTC::ReturnCode_t AutoBalancer::onInitialize()
       std::cerr << "[" << m_profile.instance_name << "] abc_leg_offset = " << leg_offset.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << "[m]" << std::endl;
       leg_pos.push_back(hrp::Vector3(-1*leg_offset));
       leg_pos.push_back(hrp::Vector3(leg_offset));
-      leg_pos.push_back(hrp::Vector3(0.45, -0.35, 0.0));
-      leg_pos.push_back(hrp::Vector3(0.45, +0.35, 0.0));
+      leg_pos.push_back(hrp::Vector3(0.04, -0.30, 0.60));
+      leg_pos.push_back(hrp::Vector3(0.04, +0.30, 0.60));
     }
     leg_names.push_back("rleg");
     leg_names.push_back("lleg");
@@ -772,8 +772,9 @@ void AutoBalancer::fixLegToCoords (const hrp::Vector3& fix_pos, const hrp::Matri
   // get current foot mid pos + rot
   std::vector<hrp::Vector3> foot_pos;
   std::vector<hrp::Matrix33> foot_rot;
-  for (size_t i = 0; i < leg_names.size(); i++) {
-      ABCIKparam& tmpikp = ikp[leg_names[i]];
+  std::vector<std::string> tmp_leg_names = boost::assign::list_of("rleg")("lleg");
+  for (size_t i = 0; i < tmp_leg_names.size(); i++) {
+      ABCIKparam& tmpikp = ikp[tmp_leg_names[i]];
       foot_pos.push_back(tmpikp.target_link->p + tmpikp.target_link->R * tmpikp.localPos);
       foot_rot.push_back(tmpikp.target_link->R * tmpikp.localR);
   }
@@ -943,8 +944,22 @@ void AutoBalancer::startWalking ()
     gg->set_default_zmp_offsets(default_zmp_offsets);
     gg->initialize_gait_parameter(ref_cog, init_support_legs_coords, init_swing_legs_dst_coords);
   }
+  /* gg->proc_one_tick() = 0, updatep = 1 ->
+     ... ->
+     gg->proc_one_tick() = 0, updatep = 1 ->
+     gg->proc_one_tick() = 1, updatep = 1 ->
+     "kokokokokok" ->
+     gg->proc_one_tick() = 1, updatep = 1 ->
+     ... ->
+     gg->proc_one_tick() = 1, updatep = 1 ->
+     gg->proc_one_tick() = 1, updatep = 0 ->
+     ... ->
+     gg->proc_one_tick() = 1, updatep = 0 ->
+     gg->proc_one_tick() = 0, updatep = 0
+  */
   while ( !gg->proc_one_tick() );
   {
+    std::cerr << "kokokokokokook" << std::endl;
     Guard guard(m_mutex);
     gg_is_walking = gg_solved = true;
   }
