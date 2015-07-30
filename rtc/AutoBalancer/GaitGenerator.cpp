@@ -430,10 +430,10 @@ namespace rats
                                                   const double delay)
   {
     /* clear all gait_parameter */
-    size_t one_step_len = footstep_nodes_list[0][0].step_time / dt;
+    size_t one_step_len = footstep_nodes_list.front().front().step_time / dt;
     finalize_count = 0;
-    for (size_t i = 0; i < footstep_nodes_list[0].size(); i++) {
-      footstep_nodes_list[0][i].worldcoords = initial_swing_legs_dst_coords[i];
+    for (size_t i = 0; i < footstep_nodes_list.front().size(); i++) {
+        footstep_nodes_list.front().at(i).worldcoords = initial_swing_legs_dst_coords.at(i);
     }
     rg.reset(one_step_len);
     rg.push_refzmp_from_footstep_nodes_for_dual(footstep_nodes_list.front(), initial_support_legs_coords, initial_swing_legs_dst_coords, all_limbs);
@@ -443,13 +443,13 @@ namespace rats
     }
     //preview_controller_ptr = new preview_dynamics_filter<preview_control>(dt, cog(2) - refzmp_cur_list[0](2), refzmp_cur_list[0]);
     preview_controller_ptr = new preview_dynamics_filter<extended_preview_control>(dt, cog(2) - rg.get_refzmp_cur()(2), rg.get_refzmp_cur(), gravitational_acceleration);
-    lcg.reset(one_step_len, footstep_nodes_list[1].front().step_time/dt, initial_swing_legs_dst_coords, initial_swing_legs_dst_coords, initial_support_legs_coords, default_double_support_ratio);
+    lcg.reset(one_step_len, footstep_nodes_list.at(1).front().step_time/dt, initial_swing_legs_dst_coords, initial_swing_legs_dst_coords, initial_support_legs_coords, default_double_support_ratio);
     /* make another */
     lcg.set_swings_supports_list(footstep_nodes_list);
     for (size_t i = 1; i < footstep_nodes_list.size()-1; i++) {
-        rg.push_refzmp_from_footstep_nodes_for_single(footstep_nodes_list[i], lcg.get_support_legs_coords_idx(i), all_limbs);
+        rg.push_refzmp_from_footstep_nodes_for_single(footstep_nodes_list.at(i), lcg.get_support_legs_coords_idx(i), all_limbs);
     }
-    rg.push_refzmp_from_footstep_nodes_for_dual(footstep_nodes_list[footstep_nodes_list.size()-1],
+    rg.push_refzmp_from_footstep_nodes_for_dual(footstep_nodes_list.back(),
                                                 lcg.get_swing_legs_dst_coords_idx(footstep_nodes_list.size()-1),
                                                 lcg.get_support_legs_coords_idx(footstep_nodes_list.size()-1),
                                                 all_limbs);
@@ -527,8 +527,8 @@ namespace rats
    *  unit system -> x [mm], y [mm], theta [deg]
    */
   void gait_generator::go_pos_param_2_footstep_nodes_list (const double goal_x, const double goal_y, const double goal_theta, /* [mm] [mm] [deg] */
-                                                           const coordinates& initial_support_coords, const coordinates& initial_swing_src_coords, coordinates start_ref_coords,
-                                                           const leg_type initial_support_leg)
+                                                           const std::vector<coordinates>& initial_support_legs_coords, coordinates start_ref_coords,
+                                                           const std::vector<leg_type>& initial_support_legs)
   {
     coordinates goal_ref_coords(start_ref_coords);
     goal_ref_coords.pos += goal_ref_coords.rot * hrp::Vector3(goal_x, goal_y, 0.0);
@@ -547,7 +547,11 @@ namespace rats
     /* initialize */
     clear_footstep_nodes_list();
     // For initial double support period
-    footstep_nodes_list.push_back(boost::assign::list_of(step_node(initial_support_leg, initial_support_coords, 0, default_step_time, 0, 0)));
+    std::vector<step_node> initial_footstep_nodes;
+    for (size_t i = 0; i < initial_support_legs.size(); i++) {
+        initial_footstep_nodes.push_back(step_node(initial_support_legs.at(i), initial_support_legs_coords.at(i), 0, default_step_time, 0, 0));
+    }
+    footstep_nodes_list.push_back(initial_footstep_nodes);
 
     /* footstep generation loop */
     hrp::Vector3 dp, dr;

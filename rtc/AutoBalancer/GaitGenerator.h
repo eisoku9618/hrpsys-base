@@ -604,17 +604,17 @@ namespace rats
           swing_legs_dst_coords_list.clear();
           support_legs_coords_list.push_back(prev_support_legs_coords);
           for (size_t j = 0; j<fnsl.size(); j++) {
-              std::vector<step_node> fns = fnsl.at(j);
-            std::vector<coordinates> swing_legs_dst_coords;
+            std::vector<step_node> fns = fnsl.at(j);
+            std::vector<coordinates> tmp_swing_legs_dst_coords;
             for (size_t i = 0; i<fns.size(); i++) {
-              swing_legs_dst_coords.push_back(fns[i].worldcoords);
+              tmp_swing_legs_dst_coords.push_back(fns.at(i).worldcoords);
             }
-            swing_legs_dst_coords_list.push_back(swing_legs_dst_coords);
+            swing_legs_dst_coords_list.push_back(tmp_swing_legs_dst_coords);
             if (j>0) {
-              if (fnsl[j].front().l_r == fnsl[j-1].front().l_r) {
+              if (fnsl.at(j).front().l_r == fnsl.at(j-1).front().l_r) {
                 support_legs_coords_list.push_back(support_legs_coords_list.back());
               } else {
-                support_legs_coords_list.push_back(swing_legs_dst_coords_list[j-1]);
+                support_legs_coords_list.push_back(swing_legs_dst_coords_list.at(j-1));
               }
             }
           }
@@ -676,21 +676,21 @@ namespace rats
       const std::vector<coordinates>& get_support_legs_coords_idx(const size_t idx) const { return support_legs_coords_list[idx]; };
       std::vector<leg_type> get_support_legs() const { return support_legs;};
       std::vector<leg_type> get_swing_legs(const std::vector<std::string>& _all_limbs) const {
-          std::vector<leg_type> tmp_support_legs, tmp_all_limbs, ret_swing_legs;
-          tmp_support_legs = support_legs;
-          for (size_t i = 0; i < _all_limbs.size(); i++) {
-              if (_all_limbs.at(i) == "rleg") tmp_all_limbs.push_back(RLEG);
-              else if (_all_limbs.at(i) == "lleg") tmp_all_limbs.push_back(LLEG);
-              else if (_all_limbs.at(i) == "rarm") tmp_all_limbs.push_back(RARM);
-              else if (_all_limbs.at(i) == "larm") tmp_all_limbs.push_back(LARM);
-              else std::cerr << "invalid input" << std::endl;
-          }
-          std::sort(tmp_all_limbs.begin(), tmp_all_limbs.end());
-          std::sort(tmp_support_legs.begin(), tmp_support_legs.end());
-          std::set_difference(tmp_all_limbs.begin(), tmp_all_limbs.end(),
-                              tmp_support_legs.begin(), tmp_support_legs.end(),
-                              std::back_inserter(ret_swing_legs));
-          return ret_swing_legs;
+        std::vector<leg_type> tmp_support_legs, tmp_all_limbs, ret_swing_legs;
+        tmp_support_legs = support_legs;
+        for (size_t i = 0; i < _all_limbs.size(); i++) {
+            if (_all_limbs.at(i) == "rleg") tmp_all_limbs.push_back(RLEG);
+            else if (_all_limbs.at(i) == "lleg") tmp_all_limbs.push_back(LLEG);
+            else if (_all_limbs.at(i) == "rarm") tmp_all_limbs.push_back(RARM);
+            else if (_all_limbs.at(i) == "larm") tmp_all_limbs.push_back(LARM);
+            else std::cerr << "invalid input" << std::endl;
+        }
+        std::sort(tmp_all_limbs.begin(), tmp_all_limbs.end());
+        std::sort(tmp_support_legs.begin(), tmp_support_legs.end());
+        std::set_difference(tmp_all_limbs.begin(), tmp_all_limbs.end(),
+                            tmp_support_legs.begin(), tmp_support_legs.end(),
+                            std::back_inserter(ret_swing_legs));
+        return ret_swing_legs;
       };
       double get_default_step_height () const { return default_step_height;};
       /* biped only */
@@ -847,9 +847,8 @@ namespace rats
     };
     /* only biped */
     void go_pos_param_2_footstep_nodes_list (const double goal_x, const double goal_y, const double goal_theta, /* [mm] [mm] [deg] */
-                                       const coordinates& initial_support_coords, const coordinates& initial_swing_src_coords, coordinates start_ref_coords,
-                                       const leg_type initial_support_leg);
-    /* only biped */
+                                             const std::vector<coordinates>& initial_support_legs_coords, coordinates start_ref_coords,
+                                             const std::vector<leg_type>& initial_support_legs);
     void go_single_step_param_2_footstep_nodes_list (const double goal_x, const double goal_y, const double goal_z, const double goal_theta, /* [mm] [mm] [mm] [deg] */
                                                const std::string& tmp_swing_leg,
                                                const coordinates& _support_leg_coords);

@@ -927,11 +927,21 @@ void AutoBalancer::startWalking ()
   }
   {
     Guard guard(m_mutex);
-    /* biped only */
-    std::string init_support_leg (gg->get_footstep_front_legs().front() == "rleg" ? "lleg" : "rleg");
-    std::string init_swing_leg (gg->get_footstep_front_legs().front());
+    std::vector<std::string> init_swing_legs(gg->get_footstep_front_legs());
+    std::vector<std::string> tmp_all_limbs(leg_names);
+    std::vector<std::string> init_support_legs;
+    std::sort(tmp_all_limbs.begin(), tmp_all_limbs.end());
+    std::sort(init_swing_legs.begin(), init_swing_legs.end());
+    std::set_difference(tmp_all_limbs.begin(), tmp_all_limbs.end(),
+                        init_swing_legs.begin(), init_swing_legs.end(),
+                        std::back_inserter(init_support_legs));
+    std::vector<coordinates> init_support_legs_coords, init_swing_legs_dst_coords;
+    for (size_t i = 0; i < init_support_legs.size(); i++)
+        init_support_legs_coords.push_back(ikp[init_support_legs.at(i)].target_end_coords);
+    for (size_t i = 0; i < init_swing_legs.size(); i++)
+        init_swing_legs_dst_coords.push_back(ikp[init_swing_legs.at(i)].target_end_coords);
     gg->set_default_zmp_offsets(default_zmp_offsets);
-    gg->initialize_gait_parameter(ref_cog, boost::assign::list_of(ikp[init_support_leg].target_end_coords), boost::assign::list_of(ikp[init_swing_leg].target_end_coords));
+    gg->initialize_gait_parameter(ref_cog, init_support_legs_coords, init_swing_legs_dst_coords);
   }
   while ( !gg->proc_one_tick() );
   {
@@ -988,10 +998,9 @@ bool AutoBalancer::goPos(const double& x, const double& y, const double& th)
     else
         mid_coords(start_ref_coords, 0.5, ikp["lleg"].target_end_coords, ikp["rleg"].target_end_coords);
     gg->go_pos_param_2_footstep_nodes_list(x, y, th,
-                                     (y > 0 ? ikp["rleg"].target_end_coords : ikp["lleg"].target_end_coords),
-                                     (y > 0 ? ikp["lleg"].target_end_coords : ikp["rleg"].target_end_coords),
-                                     start_ref_coords,
-                                     (y > 0 ? RLEG : LLEG));
+                                           (y > 0 ? boost::assign::list_of(ikp["rleg"].target_end_coords) : boost::assign::list_of(ikp["lleg"].target_end_coords)),
+                                           start_ref_coords,
+                                           (y > 0 ? boost::assign::list_of(RLEG) : boost::assign::list_of(LLEG)));
     startWalking();
     return true;
   } else {
