@@ -417,7 +417,6 @@ RTC::ReturnCode_t AutoBalancer::onExecute(RTC::UniqueId ec_id)
         rel_ref_zmp = m_robot->rootLink()->R.transpose() * (ref_zmp - m_robot->rootLink()->p);
       } else {
         for ( std::map<std::string, ABCIKparam>::iterator it = ikp.begin(); it != ikp.end(); it++ ) {
-          /* only biped */
           if (std::find(leg_names.begin(), leg_names.end(), it->first) != leg_names.end()) {
             it->second.current_p0 = it->second.target_link->p;
             it->second.current_r0 = it->second.target_link->R;
@@ -714,7 +713,8 @@ void AutoBalancer::getTargetParameters()
         // for foot_mid_pos
         tmp_foot_mid_pos += tmpikp.target_link->p + tmpikp.target_link->R * tmpikp.localPos + tmpikp.target_link->R * tmpikp.localR * default_zmp_offsets[i];
     }
-    tmp_foot_mid_pos *= 0.5;
+    tmp_foot_mid_pos *= (1.0 / leg_names.size());
+
     //
     {
         if ( gg_is_walking && gg->get_lcg_count() == static_cast<size_t>(gg->get_default_step_time()/(2*m_dt))-1) {
@@ -977,9 +977,15 @@ void AutoBalancer::stopWalking ()
   gg_is_walking = false;
 }
 
-bool AutoBalancer::startAutoBalancer (const OpenHRP::AutoBalancerService::StrSequence& limbs)
+bool AutoBalancer::startAutoBalancer (const OpenHRP::AutoBalancerService::StrSequence& limbs, const OpenHRP::AutoBalancerService::StrSequence& legs)
 {
   if (control_mode == MODE_IDLE) {
+    leg_names.clear();
+    for (size_t i = 0; i < legs.length(); i++) {
+        leg_names.push_back(std::string(legs[i]));
+        std::cerr << "[" << m_profile.instance_name << "]   leg_names [" << std::string(legs[i]) << "]" << std::endl;
+    }
+    gg->set_all_limbs(leg_names);
     startABCparam(limbs);
     waitABCTransition();
     return_control_mode = MODE_ABC;
