@@ -406,7 +406,7 @@ RTC::ReturnCode_t AutoBalancer::onExecute(RTC::UniqueId ec_id)
         rel_ref_zmp = m_robot->rootLink()->R.transpose() * (ref_zmp - m_robot->rootLink()->p);
       } else {
         for ( std::map<std::string, ABCIKparam>::iterator it = ikp.begin(); it != ikp.end(); it++ ) {
-          if (it->first == "rleg" || it->first == "lleg") {
+          if (std::find(leg_names.begin(), leg_names.end(), it->first) != leg_names.end()) {
             it->second.current_p0 = it->second.target_link->p;
             it->second.current_r0 = it->second.target_link->R;
           }
@@ -667,7 +667,7 @@ void AutoBalancer::getTargetParameters()
     target_root_p = m_robot->rootLink()->p;
     target_root_R = m_robot->rootLink()->R;
     for ( std::map<std::string, ABCIKparam>::iterator it = ikp.begin(); it != ikp.end(); it++ ) {
-      if ( control_mode == MODE_IDLE || it->first.find("leg") == std::string::npos ) {
+      if ( control_mode == MODE_IDLE || std::find(leg_names.begin(), leg_names.end(), it->first) == leg_names.end() ) {
         it->second.target_p0 = it->second.target_link->p;
         it->second.target_r0 = it->second.target_link->R;
       }
@@ -682,7 +682,7 @@ void AutoBalancer::getTargetParameters()
         // for foot_mid_pos
         tmp_foot_mid_pos += tmpikp.target_link->p + tmpikp.target_link->R * tmpikp.localPos + tmpikp.target_link->R * tmpikp.localR * default_zmp_offsets[i];
     }
-    tmp_foot_mid_pos *= 0.5;
+    tmp_foot_mid_pos *= (1.0 / leg_names.size());
 
     //
     {
@@ -718,7 +718,7 @@ void AutoBalancer::getTargetParameters()
     current_root_p = target_root_p;
     current_root_R = target_root_R;
     for ( std::map<std::string, ABCIKparam>::iterator it = ikp.begin(); it != ikp.end(); it++ ) {
-      if ( it->first.find("leg") != std::string::npos ) {
+      if ( std::find(leg_names.begin(), leg_names.end(), it->first) != leg_names.end() ) {
         it->second.target_p0 = it->second.target_link->p;
         it->second.target_r0 = it->second.target_link->R;
       }
@@ -742,8 +742,9 @@ void AutoBalancer::fixLegToCoords (const hrp::Vector3& fix_pos, const hrp::Matri
   // get current foot mid pos + rot
   std::vector<hrp::Vector3> foot_pos;
   std::vector<hrp::Matrix33> foot_rot;
-  for (size_t i = 0; i < leg_names.size(); i++) {
-      ABCIKparam& tmpikp = ikp[leg_names[i]];
+  std::vector<std::string> tmp_leg_names = boost::assign::list_of("rleg")("lleg");
+  for (size_t i = 0; i < tmp_leg_names.size(); i++) {
+      ABCIKparam& tmpikp = ikp[tmp_leg_names[i]];
       foot_pos.push_back(tmpikp.target_link->p + tmpikp.target_link->R * tmpikp.localPos);
       foot_rot.push_back(tmpikp.target_link->R * tmpikp.localR);
   }
