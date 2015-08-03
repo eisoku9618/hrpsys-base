@@ -162,7 +162,7 @@ tmpR                 : fix_rot * current_foot_mid_rot.transpose()
 ### メモ
 
 ÷2とかしているところはleg_names.size()に置き換えればいい．
-mid_rotのようにアルゴリズム的に2個を想定しているのは悩みどころ
+
 
 ### 興味
 
@@ -179,7 +179,15 @@ mid_rotのようにアルゴリズム的に2個を想定しているのは悩み
 - "leg"が4つくらいある
    - 1つ目 /  4つ目はつま先用の補正なので，あって良い
    - 2つ目は腕特別扱いパターンで，よく分からないから考える
+      - startABCで腕もis_activeになっている場合，このあとsolveLimbIKするので，目標値がこの値にセットされるため，歩いていても手先が絶対座標系で固定される．
+      - it->second.target_p0 = it->second.target_link->p;
+      - ちなみに，脚のtarget_p0のみ変更 -> fixLeg -> 今回の腕のみの部分，という流れ
+      - N客にするには一番最初の部分で腕も変更して，今回の部分をなくす必要がある．
+      - 前者はできているので，後者を変える．
+      - done!!!
    - 3つ目は足特別扱いパターンで，よくわからないから考える
+      - MODE_SYNC_TO_ABCの場合のみ
+      - it->second.target_p0 = it->second.target_link->p;
 
 ### 構想
 - goPos的な何かでcrawl歩行か何かが出来れば良さそう
@@ -203,3 +211,60 @@ mid_rotのようにアルゴリズム的に2個を想定しているのは悩み
 - その中のlcg_set_swings_supports_listで1つ前support_legs_coords_listの一番最初の値を今回のsupport_legs_coords_listにいれている
 
 が，これはどういうあれか
+
+
+#### memo
+
+1. とりあえず leg_names に "rarm" "larm"を追加してみた
+   - reset-manip-poseから(send *ri* :start-auto-balancer :limbs '(:rleg :lleg :rarm :larm))したら腕がめきゃめきゃめきゃってなって倒れた
+   - reset-manip-poseから(send *ri* :start-auto-balancer :limbs '(:rleg :lleg))したら体全体として前に動いて倒れた，これは腕と脚の真ん中にしようとして，体全体が前に移動して，また腕と脚の真ん中にしようとして，さらに前に行く，ということ？
+   - reset-manip-poseの腕もx=0のところに動かしてから(send *ri* :start-auto-balancer :limbs '(:rleg :lleg :rarm :larm))したら腕が下に下がっていてて，coかなんかで止まった
+   - reset-manip-poseの腕もx=0のところに動かしてから(send *ri* :start-auto-balancer :limbs '(:rleg :lleg))したらabcは入った．go-pos 0 0 0したらfootstepで腕も生成されて，生成終了せず止まった
+
+1. is_activeとleg_namesの違いを整理すると
+   - is_active : solveLimbIKで解くか
+   - leg_names : 重心計算に使うか？
+   - is_active : rleg / lleg , leg_names : rleg / lleg
+   - is_active : rleg / lleg / rarm / larm, leg_names : rleg / lleg / rarm / larm
+   - 両者が一致しないパターンはないとする
+
+1. 支持脚・ゆう客を交互にする前提になっているので，goPosCrawlはできない．Trotとかならできる．
+
+1. leg_namesを外から変えられるようにする
+1. goPosTrot or setFootStepsをやる
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

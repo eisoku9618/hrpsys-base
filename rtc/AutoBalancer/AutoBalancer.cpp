@@ -161,16 +161,18 @@ RTC::ReturnCode_t AutoBalancer::onInitialize()
       std::cerr << "[" << m_profile.instance_name << "] abc_leg_offset = " << leg_offset.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << "[m]" << std::endl;
       leg_pos.push_back(hrp::Vector3(-1*leg_offset));
       leg_pos.push_back(hrp::Vector3(leg_offset));
-      leg_pos.push_back(hrp::Vector3(0.04, -0.30, 0.60));
-      leg_pos.push_back(hrp::Vector3(0.04, +0.30, 0.60));
+      /* 
+       * leg_pos.push_back(hrp::Vector3(0.04, -0.30, 0.855));
+       * leg_pos.push_back(hrp::Vector3(0.04, +0.30, 0.855));
+       */
+      leg_pos.push_back(hrp::Vector3(0.04, -0.30, 1.0));
+      leg_pos.push_back(hrp::Vector3(0.04, +0.30, 1.0));
     }
     leg_names.push_back("rleg");
     leg_names.push_back("lleg");
     /* getParameterみたいなところでこの leg_names を使ってtmp_foot_mid_posを計算している */
-    /* 
-     * leg_names.push_back("rarm");
-     * leg_names.push_back("larm");
-     */
+    leg_names.push_back("rarm");
+    leg_names.push_back("larm");
 
     // setting stride limitations from conf file
     double stride_fwd_x_limit = 0.15;
@@ -416,7 +418,7 @@ RTC::ReturnCode_t AutoBalancer::onExecute(RTC::UniqueId ec_id)
       } else {
         for ( std::map<std::string, ABCIKparam>::iterator it = ikp.begin(); it != ikp.end(); it++ ) {
           /* only biped */
-          if (it->first == "rleg" || it->first == "lleg") {
+          if (std::find(leg_names.begin(), leg_names.end(), it->first) != leg_names.end()) {
             it->second.current_p0 = it->second.target_link->p;
             it->second.current_r0 = it->second.target_link->R;
           }
@@ -696,7 +698,7 @@ void AutoBalancer::getTargetParameters()
     /* 上記のようにabcをいれると，is_activeが全部trueになって，solveLimbIKが腕も呼ばれる */
     /* ので，下があると，seqから来たangle-vectorを目標値にしてikを解いてくれる */
     for ( std::map<std::string, ABCIKparam>::iterator it = ikp.begin(); it != ikp.end(); it++ ) {
-      if ( control_mode == MODE_IDLE || it->first.find("leg") == std::string::npos ) {
+      if ( control_mode == MODE_IDLE || std::find(leg_names.begin(), leg_names.end(), it->first) == leg_names.end() ) {
         it->second.target_p0 = it->second.target_link->p;
         it->second.target_r0 = it->second.target_link->R;
       }
@@ -747,7 +749,7 @@ void AutoBalancer::getTargetParameters()
     current_root_p = target_root_p;
     current_root_R = target_root_R;
     for ( std::map<std::string, ABCIKparam>::iterator it = ikp.begin(); it != ikp.end(); it++ ) {
-      if ( it->first.find("leg") != std::string::npos ) {
+      if ( std::find(leg_names.begin(), leg_names.end(), it->first) != leg_names.end() ) {
         it->second.target_p0 = it->second.target_link->p;
         it->second.target_r0 = it->second.target_link->R;
       }
