@@ -658,7 +658,7 @@ void AutoBalancer::getTargetParameters()
     // This will be removed after seq outputs adequate waistRPY discussed in https://github.com/fkanehiro/hrpsys-base/issues/272
     /* tmp_fix_coordsの回転が修正されて，水平になる．斜めブロックとかで影響が出てくるはずで，逆に横向きの斜めブロックでは影響が出ない．これは必要なのか聞く */
     /* ここはかなり大事で，これがないと腰を曲げたりしたときにfixLegToCoordsが上手く動かない */
-    /* コメントアウトしてみたら分かる by 野沢さん */
+    /* コメントアウトしてみたら分かる by 野沢さん -> コメントアウトして，waking-poseで腰を曲げて歩かせてみたけど特にかわらなかった */
     {
       hrp::Vector3 ex = hrp::Vector3::UnitX();
       hrp::Vector3 ez = hrp::Vector3::UnitZ();
