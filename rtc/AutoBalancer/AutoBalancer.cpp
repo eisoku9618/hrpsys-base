@@ -924,9 +924,15 @@ void AutoBalancer::stopWalking ()
   gg_is_walking = false;
 }
 
-bool AutoBalancer::startAutoBalancer (const OpenHRP::AutoBalancerService::StrSequence& limbs)
+bool AutoBalancer::startAutoBalancer (const OpenHRP::AutoBalancerService::StrSequence& limbs, const OpenHRP::AutoBalancerService::StrSequence& legs)
 {
   if (control_mode == MODE_IDLE) {
+    leg_names.clear();
+    for (size_t i = 0; i < legs.length(); i++) {
+        leg_names.push_back(std::string(legs[i]));
+        std::cerr << "[" << m_profile.instance_name << "]   leg_names [" << std::string(legs[i]) << "]" << std::endl;
+    }
+    gg->set_all_limbs(leg_names);
     startABCparam(limbs);
     waitABCTransition();
     return_control_mode = MODE_ABC;

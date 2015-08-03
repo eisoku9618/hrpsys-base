@@ -1896,12 +1896,12 @@ dr=0, dp=0, dw=0, tm=10, wait=True):
     # #
     # # service interface for Unstable RTC component
     # #
-    def startAutoBalancer(self, limbs=["rleg", "lleg"]):
+    def startAutoBalancer(self, limbs=["rleg", "lleg"], legs=["rleg", "lleg"]):
         '''!@brief
         Start AutoBalancer mode
         @param limbs list of end-effector name to control. rleg and lleg by default.
         '''
-        self.abc_svc.startAutoBalancer(limbs)
+        self.abc_svc.startAutoBalancer(limbs, legs)
 
     def stopAutoBalancer(self):
         '''!@brief

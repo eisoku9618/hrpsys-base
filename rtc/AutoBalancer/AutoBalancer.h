@@ -97,7 +97,7 @@ class AutoBalancer
   bool setFootStepsWithParam(const OpenHRP::AutoBalancerService::FootstepSequence& fs, const OpenHRP::AutoBalancerService::StepParamSequence& sps, CORBA::Long overwrite_fs_idx);
   void waitFootSteps();
   void waitFootStepsEarly(const double tm);
-  bool startAutoBalancer(const ::OpenHRP::AutoBalancerService::StrSequence& limbs);
+  bool startAutoBalancer(const ::OpenHRP::AutoBalancerService::StrSequence& limbs, const OpenHRP::AutoBalancerService::StrSequence& legs);
   bool stopAutoBalancer();
   bool setGaitGeneratorParam(const OpenHRP::AutoBalancerService::GaitGeneratorParam& i_param);
   bool getGaitGeneratorParam(OpenHRP::AutoBalancerService::GaitGeneratorParam& i_param);

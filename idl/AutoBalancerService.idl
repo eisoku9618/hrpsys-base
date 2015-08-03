@@ -250,7 +250,7 @@ module OpenHRP
      * @param limbs is sequence of limbs to fix. limbs are :rleg, :lleg, :rarm, and :larm
      * @return true if set successfully, false otherwise
      */
-    boolean startAutoBalancer(in StrSequence limbs);
+    boolean startAutoBalancer(in StrSequence limbs, in StrSequence legs);
 
     /**
      * @brief Stop AutoBalancer mode.
