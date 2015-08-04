@@ -231,8 +231,14 @@ tmpR                 : fix_rot * current_foot_mid_rot.transpose()
 1. 支持脚・ゆう客を交互にする前提になっているので，goPosCrawlはできない．Trotとかならできる．
 
 1. leg_namesを外から変えられるようにする
+   - done
 1. goPosTrot or setFootStepsをやる
-
+   - goPosTrotだと何が難しいか
+      - 何も難しくなさそう -> こちらでやってみる
+   - setFootStepsだと何が難しいか
+      - idlを作らないと行けない
+      - rtm-ros-robot-interfaceで関数を作らないといけない
+      - 両者とも既にあるやつのvectorばんを作ればいいだけ？
 
 
 

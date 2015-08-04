@@ -1032,6 +1032,23 @@ bool AutoBalancer::goPos(const double& x, const double& y, const double& th)
   }
 }
 
+bool AutoBalancer::goPosTrot(const double& x, const double& y, const double& th)
+{
+  if ( !gg_is_walking && !is_stop_mode) {
+    coordinates start_ref_coords;
+    mid_coords(start_ref_coords, 0.5, ikp["rleg"].target_end_coords, ikp["lleg"].target_end_coords);
+    gg->go_pos_param_2_footstep_nodes_list(x, y, th,
+                                           (y > 0 ? boost::assign::list_of(ikp["rleg"].target_end_coords)(ikp["larm"].target_end_coords) : boost::assign::list_of(ikp["lleg"].target_end_coords)(ikp["rarm"].target_end_coords)),
+                                           start_ref_coords,
+                                           (y > 0 ? boost::assign::list_of(RLEG)(LARM) : boost::assign::list_of(LLEG)(RARM)));
+    startWalking();
+    return true;
+  } else {
+    std::cerr << "[" << m_profile.instance_name << "] Cannot goPosTrot while walking." << std::endl;
+    return false;
+  }
+}
+
 bool AutoBalancer::goVelocity(const double& vx, const double& vy, const double& vth)
 {
   if (gg_is_walking && gg_solved) {

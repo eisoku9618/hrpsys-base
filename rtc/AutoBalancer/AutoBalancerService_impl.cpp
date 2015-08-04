@@ -14,6 +14,11 @@ CORBA::Boolean AutoBalancerService_impl::goPos( CORBA::Double x,  CORBA::Double 
   return m_autobalancer->goPos(x, y, th);
 };
 
+CORBA::Boolean AutoBalancerService_impl::goPosTrot( CORBA::Double x,  CORBA::Double y,  CORBA::Double th)
+{
+  return m_autobalancer->goPosTrot(x, y, th);
+};
+
 CORBA::Boolean AutoBalancerService_impl::goVelocity( CORBA::Double vx,  CORBA::Double vy,  CORBA::Double vth)
 {
   return m_autobalancer->goVelocity(vx, vy, vth);
