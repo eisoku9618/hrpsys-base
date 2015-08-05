@@ -196,7 +196,7 @@ tmpR                 : fix_rot * current_foot_mid_rot.transpose()
 - AutoBalancer::goPos(const double& x, const double& y, const double& th)
    - 入力は一般性あり
 
-#### 野沢さんに聞きたいこ2
+#### 野沢さんに聞きたいこと2
 
 - initialize_gait_parameterの最初の方で，一歩目を上書きしているのはなぜ？
 - printしたらかわっていないみたい
@@ -211,6 +211,65 @@ tmpR                 : fix_rot * current_foot_mid_rot.transpose()
 - その中のlcg_set_swings_supports_listで1つ前support_legs_coords_listの一番最初の値を今回のsupport_legs_coords_listにいれている
 
 が，これはどういうあれか
+
+- get_swing_support_mid_coordsがbiped onlyだった．これはfixLegToCoordsとも関係している．
+   - 登場人物は
+      - fixLegToCoords
+      - fix_leg_coords : abcのinitializeの段階で定義されて．その後ずっと使われる．
+      - tmp_fix_coords : getTragetParameterで毎回定義されなおす．
+   - くらい
+
+   - gg_is_walking のときは
+      - gg->get_swing_support_mid_coords(tmp_fix_coords);
+   - !gg_is_walking のときは
+      - tmp_fix_coords = fix_leg_coords;
+   - そのあとに !adjust_footstep_interpolator->isEmpty() なら
+      - fix_leg_coords = いい感じ(adjustなんちゃらを考慮した)に計算した両足end-coordsの真ん中
+      - tmp_fix_coords = fix_leg_coords;
+   - さらにそのあとに
+      - tmp_fix_coordsを水平にする
+   - で，fixLegToCoords(tmp_fix_coords.pos, tmp_fix_coords.rot);する
+
+   - stopWalkingのときに
+      - fix_leg_coords = 両足のend-coordsの真ん中
+
+- N脚のときにもmid_coordsをできるようにするのはできそう -> できた
+- あとは，FixLegToCoordsが微妙っぽい
+
+#### goPosTrotすると暴れる
+go-posのときと比較すると，target_p0はいい感じだけど，target_link->pが全然ダメで．腕のupperlimitにかかっている．
+
+---
+go-pos-trot-ver
+
+name : larm
+target_p0 :     [0.000132309,  0.300159,  0.718077]
+target_link->p :     [-0.0355643,  0.297042,  0.960845]
+name : lleg
+target_p0 :     [-1.75438e-05,  0.09,  0.069978]
+target_link->p :     [-0.010677,  0.0883569,  0.312745]
+name : rarm
+target_p0 :     [0.000249268,  -0.299841,  0.718224]
+target_link->p :     [0.0360331,  -0.298682,  0.960992]
+name : rleg
+target_p0 :     [1.75438e-05,  -0.09,  0.070022]
+target_link->p : [0.0108018, -0.0903569,  0.312789]
+
+---
+go-pos ver
+
+name : larm
+target_p0 :     [0.000132309,  0.300159,  0.718077]
+target_link->p :     [-0.0155233,  0.29996,  0.718077]
+name : lleg
+target_p0 :     [0,  0.09,  0.07]
+target_link->p :     [-2.92423e-07,  0.09,  0.0700001]
+name : rarm
+target_p0 :     [0.000249268,  -0.299841,  0.718224]
+target_link->p :     [-0.0154064,  -0.30004,  0.718224]
+name : rleg
+target_p0 :     [0,  -0.09,  0.07]
+target_link->p :     [-2.92286e-07,  -0.09,  0.0700001]
 
 
 #### memo
@@ -240,37 +299,4 @@ tmpR                 : fix_rot * current_foot_mid_rot.transpose()
       - rtm-ros-robot-interfaceで関数を作らないといけない
       - 両者とも既にあるやつのvectorばんを作ればいいだけ？
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+1. get_swing_support_mid_coords が biped only だった．どうしよう．

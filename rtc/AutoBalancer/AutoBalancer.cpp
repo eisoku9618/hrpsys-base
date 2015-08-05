@@ -165,8 +165,8 @@ RTC::ReturnCode_t AutoBalancer::onInitialize()
        * leg_pos.push_back(hrp::Vector3(0.04, -0.30, 0.855));
        * leg_pos.push_back(hrp::Vector3(0.04, +0.30, 0.855));
        */
-      leg_pos.push_back(hrp::Vector3(0.04, -0.30, 1.0));
-      leg_pos.push_back(hrp::Vector3(0.04, +0.30, 1.0));
+      leg_pos.push_back(hrp::Vector3(0.04, -0.30, 0.6));
+      leg_pos.push_back(hrp::Vector3(0.04, +0.30, 0.6));
     }
     leg_names.push_back("rleg");
     leg_names.push_back("lleg");
@@ -838,9 +838,9 @@ void AutoBalancer::solveLimbIK ()
       }
   }
   m_robot->calcForwardKinematics();
-
   /* is_activeだったらikを解く．現在：ttarget_link->p / 目標：target_p0 */
   for ( std::map<std::string, ABCIKparam>::iterator it = ikp.begin(); it != ikp.end(); it++ ) {
+      if (gg_is_walking)  std::cerr << "name : " << it->first << std::endl << "target_p0 : " << it->second.target_p0.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl << "target_link->p : " << it->second.target_link->p.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
     if (it->second.is_active) solveLimbIKforLimb(it->second);
   }
   if (gg_is_walking && !gg_solved) stopWalking ();

@@ -693,12 +693,41 @@ namespace rats
         return ret_swing_legs;
       };
       double get_default_step_height () const { return default_step_height;};
-      /* biped only */
       void get_swing_support_mid_coords(coordinates& ret) const
       {
-        coordinates tmp;
-        mid_coords(tmp, foot_midcoords_ratio, swing_legs_src_coords.front(), swing_legs_dst_coords.front());
-        mid_coords(ret, 0.5, tmp, support_legs_coords.front());
+        std::vector<coordinates> tmp_for_swg_vec;
+        coordinates tmp, tmp_for_swg, tmp_for_sup, tmp1, tmp2;
+        /* for swing leg */
+        for (size_t i = 0; i < swing_legs_src_coords.size(); i++) {
+            mid_coords(tmp, foot_midcoords_ratio, swing_legs_src_coords.at(i), swing_legs_dst_coords.at(i));
+            tmp_for_swg_vec.push_back(tmp);
+        }
+        switch( tmp_for_swg_vec.size() ) {
+        case 1: tmp_for_swg = tmp_for_swg_vec.front(); break;
+        case 2: mid_coords(tmp_for_swg, 0.5, tmp_for_swg_vec.front(), tmp_for_swg_vec.at(1)); break;
+        case 3:
+            mid_coords(tmp1, 1.0/3, tmp_for_swg_vec.front(), tmp_for_swg_vec.at(1));
+            mid_coords(tmp2, 1.0/3, tmp_for_swg_vec.front(), tmp_for_swg_vec.at(2));
+            mid_coords(tmp_for_swg, 0.5, tmp1, tmp2);
+            break;
+        default:
+            std::cerr << "the number of support legs is limitted within 1, 2 or 3" << std::endl;
+            break;
+        }
+        /* for support leg */
+        switch( support_legs_coords.size() ) {
+        case 1: tmp_for_sup = support_legs_coords.front(); break;
+        case 2: mid_coords(tmp_for_sup, 0.5, support_legs_coords.front(), support_legs_coords.at(1)); break;
+        case 3:
+            mid_coords(tmp1, 1.0/3, support_legs_coords.front(), support_legs_coords.at(1));
+            mid_coords(tmp2, 1.0/3, support_legs_coords.front(), support_legs_coords.at(2));
+            mid_coords(tmp_for_sup, 0.5, tmp1, tmp2);
+            break;
+        default:
+            std::cerr << "the number of swing legs is limitted within 1, 2 or 3" << std::endl;
+            break;
+        }
+        mid_coords(ret, 0.5, tmp_for_swg, tmp_for_sup);
       };
       /* vectorになったので，bothとか要らないのでは？ */
       std::vector<leg_type> get_current_support_states () const
