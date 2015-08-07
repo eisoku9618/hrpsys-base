@@ -235,6 +235,60 @@ tmpR                 : fix_rot * current_foot_mid_rot.transpose()
 
 - N脚のときにもmid_coordsをできるようにするのはできそう -> できた
 - あとは，FixLegToCoordsが微妙っぽい
+- getCurrentParamters 直後は target_p0 / target_link->p ともにいい感じで，
+- getTargetParamters 直後に ずれて，solveLimbの中ではちょっと戻る．変化するのはtarget_link->pの方なので，fixLegToCoordsが影響しているはず
+- fixLegToCoordsを手足の真ん中にすれば良い？
+- fixLegToCoordsをそうしちゃうと，leg_posが足裏基準なのでずれちゃう．．．
+   - 関係無さそうで，問題は違うところにあるっぽい
+
+- もう一度座標系を整理する必要あり 絵を書く？
+- 登場人物は
+   - fix_leg_coords
+   - tmp_fix_coords
+   - rootLink->p / R
+   - target_end_coords
+   - swing_legs_src_coords / swing_legs_dst_coords / support_legs_coords
+   - footstep_nodes_list
+- くらい
+
+- fixLegToCoordsしているのは，eusから与えたangle-vectorのときの腰の位置姿勢をabcの中でのm_robotの腰の位置姿勢に与えたいからで．
+
+
+### 歩かない場合
+1. eus から angle-vector(例えばreset-pose) を 送る．rootLinkの位置姿勢とかは送らずに純粋にangle-vectorだけを送る．
+   - onExecuteの中でgetTargetParamtersが呼ばれる
+      - 姿勢がangle-vectorになりつつ，rootLinkは宙に浮くようになる（VRMLのwaistの位置姿勢にセットされる）
+      - tmp_fix_coords = fix_leg_coords(最初は原点)
+      - getTargetParametersの中のfixLegToCoordsにて，両足の真ん中がtmp_fix_coordsに一致するよう，全体的に動く
+      - target_end_coordsが計算されて保存される
+
+### start-auto-balancerした場合
+1. 上の一連の流れが終わっていたとして，eus から start-auto-balancerした
+   - abc の startAutoBalancer -> startABCParam で is_activeがセットされる
+   - mode_sync_to_abcの間にtarget_p0 / target_r0 が現在地にセットされる
+   - で，onExecuteが呼ばれてgetTargetParametersが呼ばれる
+      - tmp_fix_coords = fix_leg_coords(最初は原点)
+      - getTargetParametersの中のfixLegToCoordsにて，両足の真ん中がtmp_fix_coordsに一致するよう，全体的に動く
+      - target_end_coordsが計算されて保存される
+      - ref_cogが両足のend-coordsの真ん中にセットされる．zだけ別枠で現在の重心位置 related to WORLD になる．
+   - solveLimbIKが呼ばれる
+      - rootLinkの位置が現在の重心とref_cogの差分だけ動く．姿勢は変わらない．
+      - で，target_p0 / target_r0 に向けて ik を解く
+
+
+### 歩く場合
+reset-poseを送っていて，上の一連の流れが終わっているとする．
+1. eus から go-pos 0 0 0 を送る
+   - abcのgoPosが呼ばれ，start_ref_coordsが両足のtarget_end_coordsの真ん中になる
+   - これをstart_ref_coordsにする（ので，この場合は原点）
+   - これからfootstep_nodes_listを計算していく
+   - で，onExecuteが呼ばれてgetTargetParametersが呼ばれる
+   - 姿勢がangle-vectorになりつつ，rootLinkは宙に浮くようになる（VRMLのwaistの位置姿勢にセットされる）
+   - 
+
+
+
+goPos
 
 #### goPosTrotすると暴れる
 go-posのときと比較すると，target_p0はいい感じだけど，target_link->pが全然ダメで．腕のupperlimitにかかっている．

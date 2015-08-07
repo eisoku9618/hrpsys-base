@@ -15,7 +15,7 @@
 #include <hrpModel/JointPath.h>
 #include <hrpUtil/MatrixSolvers.h>
 #include "util/Hrpsys.h"
-
+#include <numeric>
 
 typedef coil::Guard<coil::Mutex> Guard;
 using namespace rats;
@@ -671,8 +671,19 @@ void AutoBalancer::getTargetParameters()
       tmp_fix_coords.rot(0,1) = yv1(0); tmp_fix_coords.rot(1,1) = yv1(1); tmp_fix_coords.rot(2,1) = yv1(2);
       tmp_fix_coords.rot(0,2) = ez(0); tmp_fix_coords.rot(1,2) = ez(1); tmp_fix_coords.rot(2,2) = ez(2);
     }
+    std::cerr << "before fixLegToCoords rootLink : " << std::endl;
+    std::cerr << "\t" << m_robot->rootLink()->p.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+    std::cerr << "\t" << m_robot->rootLink()->R.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n\t", "    [", "]")) << std::endl;
+    std::cerr << "before fixLegToCoords tmp_fix_coords : " << std::endl;
+    std::cerr << "\t" << tmp_fix_coords.pos.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+    std::cerr << "\t" << tmp_fix_coords.rot.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n\t", "    [", "]")) << std::endl;
     fixLegToCoords(tmp_fix_coords.pos, tmp_fix_coords.rot);
-
+    std::cerr << "after fixLegToCoords rootLink : " << std::endl;
+    std::cerr << "\t" << m_robot->rootLink()->p.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+    std::cerr << "\t" << m_robot->rootLink()->R.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n\t", "    [", "]")) << std::endl;
+    std::cerr << "after fixLegToCoords tmp_fix_coords : " << std::endl;
+    std::cerr << "\t" << tmp_fix_coords.pos.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+    std::cerr << "\t" << tmp_fix_coords.rot.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n\t", "    [", "]")) << std::endl;
     /* update ref_forces ;; sp's absolute -> rmc's absolute */
     for (size_t i = 0; i < m_ref_forceIn.size(); i++) {
       hrp::Matrix33 eeR;
@@ -692,7 +703,6 @@ void AutoBalancer::getTargetParameters()
 
     target_root_p = m_robot->rootLink()->p;
     target_root_R = m_robot->rootLink()->R;
-    /* only biped : very important */
     /* ここはstartAutoBalancerのrleg lleg rarm larm のようにしていれた状態で，台車押しながら歩くときに効いてくるところ */
     /* 上記のようにabcをいれると，is_activeが全部trueになって，solveLimbIKが腕も呼ばれる */
     /* ので，下があると，seqから来たangle-vectorを目標値にしてikを解いてくれる */
@@ -704,7 +714,6 @@ void AutoBalancer::getTargetParameters()
     }
 
     hrp::Vector3 tmp_foot_mid_pos(hrp::Vector3::Zero());
-    /* only biped */
     for (size_t i = 0; i < leg_names.size(); i++) {
         ABCIKparam& tmpikp = ikp[leg_names[i]];
         // get target_end_coords
@@ -774,16 +783,28 @@ void AutoBalancer::fixLegToCoords (const hrp::Vector3& fix_pos, const hrp::Matri
   // get current foot mid pos + rot
   std::vector<hrp::Vector3> foot_pos;
   std::vector<hrp::Matrix33> foot_rot;
-  std::vector<std::string> tmp_leg_names = boost::assign::list_of("rleg")("lleg");
-  for (size_t i = 0; i < tmp_leg_names.size(); i++) {
-      ABCIKparam& tmpikp = ikp[tmp_leg_names[i]];
+  for (size_t i = 0; i < leg_names.size(); i++) {
+      ABCIKparam& tmpikp = ikp[leg_names[i]];
       foot_pos.push_back(tmpikp.target_link->p + tmpikp.target_link->R * tmpikp.localPos);
       foot_rot.push_back(tmpikp.target_link->R * tmpikp.localR);
   }
-  /* only biped */
-  hrp::Vector3 current_foot_mid_pos ((foot_pos[0]+foot_pos[1])/2.0);
-  hrp::Matrix33 current_foot_mid_rot;
-  mid_rot(current_foot_mid_rot, 0.5, foot_rot[0], foot_rot[1]);
+  hrp::Vector3 tmp_zero = hrp::Vector3::Zero();
+  hrp::Vector3 current_foot_mid_pos = std::accumulate(foot_pos.begin(), foot_pos.end(), tmp_zero) / foot_pos.size();
+  hrp::Matrix33 current_foot_mid_rot, tmp1, tmp2;
+  switch (foot_rot.size()) {
+  case 2: mid_rot(current_foot_mid_rot, 0.5, foot_rot.at(0), foot_rot.at(1)); break;
+  case 3:
+      mid_rot(tmp1, 1.0/3, foot_rot.front(), foot_rot.at(1));
+      mid_rot(tmp2, 1.0/3, foot_rot.front(), foot_rot.at(2));
+      mid_rot(current_foot_mid_rot, 0.5, tmp1, tmp2);
+      break;
+  case 4:
+      mid_rot(tmp1, 0.5, foot_rot.front(), foot_rot.at(1));
+      mid_rot(tmp2, 0.5, foot_rot.at(2), foot_rot.at(3));
+      mid_rot(current_foot_mid_rot, 0.5, tmp1, tmp2);
+      break;
+  default: std::cerr << "the number of leg_namse is limitted within 2, 3, 4" << std::endl; break;
+  }
   // fix root pos + rot to fix "coords" = "current_foot_mid_xx"
   hrp::Matrix33 tmpR (fix_rot * current_foot_mid_rot.transpose());
   m_robot->rootLink()->p = fix_pos + tmpR * (m_robot->rootLink()->p - current_foot_mid_pos);
@@ -830,7 +851,7 @@ void AutoBalancer::solveLimbIK ()
   for ( std::map<std::string, ABCIKparam>::iterator it = ikp.begin(); it != ikp.end(); it++ ) {
       if (it->second.is_active && (it->first.find("leg") != std::string::npos) && it->second.manip->numJoints() == 7) {
           int i = it->second.target_link->jointId;
-          if (gg->get_swing_legs().front() == it->first) {
+          if (gg->get_swing_legs().front() == it->first) { /* TODO */
               m_robot->joint(i)->q = qrefv[i] + -1 * gg->get_foot_dif_rot_angle();
           } else {
               m_robot->joint(i)->q = qrefv[i];
@@ -1024,6 +1045,12 @@ bool AutoBalancer::goPos(const double& x, const double& y, const double& th)
                                            (y > 0 ? boost::assign::list_of(ikp["rleg"].target_end_coords) : boost::assign::list_of(ikp["lleg"].target_end_coords)),
                                            start_ref_coords,
                                            (y > 0 ? boost::assign::list_of(RLEG) : boost::assign::list_of(LLEG)));
+    std::cerr << "goPos rootLink : " << std::endl;
+    std::cerr << "\t" << m_robot->rootLink()->p.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+    std::cerr << "\t" << m_robot->rootLink()->R.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n\t", "    [", "]")) << std::endl;
+    std::cerr << "goPos start_ref_coords : " << std::endl;
+    std::cerr << "\t" << start_ref_coords.pos.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+    std::cerr << "\t" << start_ref_coords.rot.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n\t", "    [", "]")) << std::endl;
     startWalking();
     return true;
   } else {
