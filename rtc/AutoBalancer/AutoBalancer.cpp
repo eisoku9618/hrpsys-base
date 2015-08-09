@@ -342,7 +342,7 @@ RTC::ReturnCode_t AutoBalancer::onDeactivated(RTC::UniqueId ec_id)
   return RTC::RTC_OK;
 }
 
-#define DEBUGP ((m_debugLevel==1 && loop%200==0) || m_debugLevel > 1 )
+#define DEBUGP ((m_debugLevel==0 && loop%200==0) || m_debugLevel > 1 )
 //#define DEBUGP2 ((loop%200==0))
 #define DEBUGP2 (false)
 RTC::ReturnCode_t AutoBalancer::onExecute(RTC::UniqueId ec_id)
@@ -540,6 +540,7 @@ void AutoBalancer::getCurrentParameters()
 
 void AutoBalancer::getTargetParameters()
 {
+  if (DEBUGP) std::cerr << std::endl << "getTargetParameters" << std::endl;
   // joint angles
   for ( int i = 0; i < m_robot->numJoints(); i++ ){
     m_robot->joint(i)->q = m_qRef.data[i];
@@ -570,6 +571,10 @@ void AutoBalancer::getTargetParameters()
       // for support leg
       coordinates sp_coords, sw_coords, tmpc;
       for (size_t i = 0; i < gg->get_support_legs_coords().size(); i++) {
+          if(DEBUGP) {
+              std::cerr << "gg->get_support_legs()[i] : " << gg->get_support_legs()[i] << std::endl;
+              std::cerr << "gg->get_support_legs_coords()[i].pos : " << gg->get_support_legs_coords()[i].pos.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+          }
         sp_coords = coordinates(gg->get_support_legs_coords()[i].pos,
                                 gg->get_support_legs_coords()[i].rot);
         coordinates(ikp[gg->get_support_legs()[i]].localPos,
@@ -580,6 +585,10 @@ void AutoBalancer::getTargetParameters()
       }
       // for swing leg
       for (size_t i = 0; i < gg->get_swing_legs_coords().size(); i++) {
+          if(DEBUGP) {
+              std::cerr << "gg->get_swing_legs()[i] : " << gg->get_swing_legs()[i] << std::endl;
+              std::cerr << "gg->get_swing_legs_coords()[i].pos : " << gg->get_swing_legs_coords()[i].pos.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+          }
         sw_coords = coordinates(gg->get_swing_legs_coords()[i].pos,
                                 gg->get_swing_legs_coords()[i].rot);
         coordinates(ikp[gg->get_swing_legs()[i]].localPos,
@@ -671,19 +680,23 @@ void AutoBalancer::getTargetParameters()
       tmp_fix_coords.rot(0,1) = yv1(0); tmp_fix_coords.rot(1,1) = yv1(1); tmp_fix_coords.rot(2,1) = yv1(2);
       tmp_fix_coords.rot(0,2) = ez(0); tmp_fix_coords.rot(1,2) = ez(1); tmp_fix_coords.rot(2,2) = ez(2);
     }
-    std::cerr << "before fixLegToCoords rootLink : " << std::endl;
-    std::cerr << "\t" << m_robot->rootLink()->p.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
-    std::cerr << "\t" << m_robot->rootLink()->R.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n\t", "    [", "]")) << std::endl;
-    std::cerr << "before fixLegToCoords tmp_fix_coords : " << std::endl;
-    std::cerr << "\t" << tmp_fix_coords.pos.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
-    std::cerr << "\t" << tmp_fix_coords.rot.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n\t", "    [", "]")) << std::endl;
+    if (DEBUGP) {
+        std::cerr << "seq : rootLink : " << std::endl;
+        std::cerr << "\t" << m_robot->rootLink()->p.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+        std::cerr << "\t" << m_robot->rootLink()->R.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n\t", "    [", "]")) << std::endl;
+        std::cerr << "seq : tmp_fix_coords : " << std::endl;
+        std::cerr << "\t" << tmp_fix_coords.pos.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+        std::cerr << "\t" << tmp_fix_coords.rot.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n\t", "    [", "]")) << std::endl;
+    }
     fixLegToCoords(tmp_fix_coords.pos, tmp_fix_coords.rot);
-    std::cerr << "after fixLegToCoords rootLink : " << std::endl;
-    std::cerr << "\t" << m_robot->rootLink()->p.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
-    std::cerr << "\t" << m_robot->rootLink()->R.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n\t", "    [", "]")) << std::endl;
-    std::cerr << "after fixLegToCoords tmp_fix_coords : " << std::endl;
-    std::cerr << "\t" << tmp_fix_coords.pos.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
-    std::cerr << "\t" << tmp_fix_coords.rot.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n\t", "    [", "]")) << std::endl;
+    if (DEBUGP) {
+        std::cerr << "fixLegToCoords rootLink : " << std::endl;
+        std::cerr << "\t" << m_robot->rootLink()->p.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+        std::cerr << "\t" << m_robot->rootLink()->R.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n\t", "    [", "]")) << std::endl;
+        std::cerr << "fixLegToCoords tmp_fix_coords : " << std::endl;
+        std::cerr << "\t" << tmp_fix_coords.pos.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+        std::cerr << "\t" << tmp_fix_coords.rot.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n\t", "    [", "]")) << std::endl;
+    }
     /* update ref_forces ;; sp's absolute -> rmc's absolute */
     for (size_t i = 0; i < m_ref_forceIn.size(); i++) {
       hrp::Matrix33 eeR;
@@ -723,7 +736,12 @@ void AutoBalancer::getTargetParameters()
         tmp_foot_mid_pos += tmpikp.target_link->p + tmpikp.target_link->R * tmpikp.localPos + tmpikp.target_link->R * tmpikp.localR * default_zmp_offsets[i];
     }
     tmp_foot_mid_pos *= (1.0 / leg_names.size());
-
+    if (DEBUGP) {
+        std::cerr << "tmp_foot_mid_pos : " << std::endl;
+        std::cerr << "\t" << tmp_foot_mid_pos.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+        std::cerr << "m_robot->calcCM : " << std::endl;
+        std::cerr << "\t" << m_robot->calcCM().format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+    }
     //
     {
         if ( gg_is_walking && gg->get_lcg_count() == static_cast<size_t>(gg->get_default_step_time()/(2*m_dt))-1) {
@@ -805,6 +823,11 @@ void AutoBalancer::fixLegToCoords (const hrp::Vector3& fix_pos, const hrp::Matri
       break;
   default: std::cerr << "the number of leg_namse is limitted within 2, 3, 4" << std::endl; break;
   }
+  if (DEBUGP) {
+      std::cerr << "[fixLegToCoords] current_foot_mid_pos / fix_pos : " << std::endl;
+      std::cerr << current_foot_mid_pos.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+      std::cerr << fix_pos.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+  }
   // fix root pos + rot to fix "coords" = "current_foot_mid_xx"
   hrp::Matrix33 tmpR (fix_rot * current_foot_mid_rot.transpose());
   m_robot->rootLink()->p = fix_pos + tmpR * (m_robot->rootLink()->p - current_foot_mid_pos);
@@ -840,13 +863,29 @@ void AutoBalancer::solveLimbIK ()
   m_robot->rootLink()->p = current_root_p;
   m_robot->rootLink()->R = current_root_R;
   m_robot->calcForwardKinematics();
+    if (DEBUGP) {
+        std::cerr << "set current_root rootLink : " << std::endl;
+        std::cerr << "\t" << m_robot->rootLink()->p.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+        std::cerr << "\t" << m_robot->rootLink()->R.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n\t", "    [", "]")) << std::endl;
+    }
   hrp::Vector3 tmp_input_sbp = hrp::Vector3(0,0,0);
-  /* ref forceが0ならここはキニシナイくてOK．tmp_input_sbpにはほぼ calcCM，zだけref_zmp(2)となる． */
+  /* ref forceが0ならここはキニシナイくてOK．tmp_input_sbpには calcCM，zだけref_zmp(2)となる． */
   static_balance_point_proc_one(tmp_input_sbp, ref_zmp(2));
   hrp::Vector3 dif_cog = tmp_input_sbp - ref_cog;
   dif_cog(2) = m_robot->rootLink()->p(2) - target_root_p(2); /* 0が入る.ここはどういうときに0でなくなるのか？ ほぼ0 */
+    if (DEBUGP) {
+        std::cerr << "ref_cog : " << std::endl;
+        std::cerr << "\t" << ref_cog.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+        std::cerr << "dif_cog : " << std::endl;
+        std::cerr << "\t" << dif_cog.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+    }
   m_robot->rootLink()->p = m_robot->rootLink()->p + -1 * move_base_gain * dif_cog;
   m_robot->rootLink()->R = target_root_R;
+    if (DEBUGP) {
+        std::cerr << "final rootLink : " << std::endl;
+        std::cerr << "\t" << m_robot->rootLink()->p.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+        std::cerr << "\t" << m_robot->rootLink()->R.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n\t", "    [", "]")) << std::endl;
+    }
   // Fix for toe joint
   for ( std::map<std::string, ABCIKparam>::iterator it = ikp.begin(); it != ikp.end(); it++ ) {
       if (it->second.is_active && (it->first.find("leg") != std::string::npos) && it->second.manip->numJoints() == 7) {
@@ -861,7 +900,7 @@ void AutoBalancer::solveLimbIK ()
   m_robot->calcForwardKinematics();
   /* is_activeだったらikを解く．現在：ttarget_link->p / 目標：target_p0 */
   for ( std::map<std::string, ABCIKparam>::iterator it = ikp.begin(); it != ikp.end(); it++ ) {
-      if (gg_is_walking)  std::cerr << "name : " << it->first << std::endl << "target_p0 : " << it->second.target_p0.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl << "target_link->p : " << it->second.target_link->p.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+      if (gg_is_walking && DEBUGP)  std::cerr << "name : " << it->first << std::endl << "target_p0 : " << it->second.target_p0.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl << "target_link->p : " << it->second.target_link->p.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
     if (it->second.is_active) solveLimbIKforLimb(it->second);
   }
   if (gg_is_walking && !gg_solved) stopWalking ();
@@ -1045,12 +1084,14 @@ bool AutoBalancer::goPos(const double& x, const double& y, const double& th)
                                            (y > 0 ? boost::assign::list_of(ikp["rleg"].target_end_coords) : boost::assign::list_of(ikp["lleg"].target_end_coords)),
                                            start_ref_coords,
                                            (y > 0 ? boost::assign::list_of(RLEG) : boost::assign::list_of(LLEG)));
-    std::cerr << "goPos rootLink : " << std::endl;
-    std::cerr << "\t" << m_robot->rootLink()->p.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
-    std::cerr << "\t" << m_robot->rootLink()->R.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n\t", "    [", "]")) << std::endl;
-    std::cerr << "goPos start_ref_coords : " << std::endl;
-    std::cerr << "\t" << start_ref_coords.pos.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
-    std::cerr << "\t" << start_ref_coords.rot.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n\t", "    [", "]")) << std::endl;
+    if (DEBUGP) {
+        std::cerr << "goPos rootLink : " << std::endl;
+        std::cerr << "\t" << m_robot->rootLink()->p.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+        std::cerr << "\t" << m_robot->rootLink()->R.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n\t", "    [", "]")) << std::endl;
+        std::cerr << "goPos start_ref_coords : " << std::endl;
+        std::cerr << "\t" << start_ref_coords.pos.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+        std::cerr << "\t" << start_ref_coords.rot.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n\t", "    [", "]")) << std::endl;
+    }
     startWalking();
     return true;
   } else {

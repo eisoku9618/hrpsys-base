@@ -19,15 +19,15 @@ ABCIKparamだと
    - from : VRML-world座標
    - to   : 足の末端リンク座標
 - current_p0 current_r0
-   - from : 
+   - from :
    - to   :
    - target_link->p / R を保持する
 - localPos   localR
    - from : 足の末端リンク座標
    - to   : 足のend-effector座標
 - target_end_coords
-   - from : 
-   - to   : 
+   - from :
+   - to   :
 - target_link->p target_link->R
    - from : VRML-world座標
    - to   : 足の末端リンク座標
@@ -272,8 +272,47 @@ tmpR                 : fix_rot * current_foot_mid_rot.transpose()
       - target_end_coordsが計算されて保存される
       - ref_cogが両足のend-coordsの真ん中にセットされる．zだけ別枠で現在の重心位置 related to WORLD になる．
    - solveLimbIKが呼ばれる
+      - rootLinkにcurret_root_p/Rがセットされる
       - rootLinkの位置が現在の重心とref_cogの差分だけ動く．姿勢は変わらない．
       - で，target_p0 / target_r0 に向けて ik を解く
+
+### rootLink / angle-vector 関連
+1. getCurrentParameters
+   - current_root = m_robot->rootLink()
+   * qorg = m_robot->joint
+1. getTargetParameters の最初
+   - m_robot->rootLink() = seqから来た指令値
+   * m_robot->joint = seqから来た指令値
+1. getTargetParameters の真ん中
+   * 足のみ： target_p0 / r0 = footstepから計算
+      - これはもっと後ろでいいのでは．後ろというか腕のtarget_p0付近でいいのでは．
+   - fixLegToCoords(tmp_fix_coords.pos, tmp_fix_coords.rot);
+   - A: 現在のrootLink / angle-vector から計算した両足のend-coords
+      - seqから来た値が入っていることがポイント
+   - B: swg_coords と sup_coords の真ん中くらい
+      - tmp_fix_coords : swing_support_mid_coords
+   - A が B に一致するようm_robot->rootLinkを動かす
+1. getTargetParameters の最後
+   - target_root = m_robot->rootLink()
+      - ここで rootLink の高さをtarget_rootに教えることができる
+   * 腕のみ： target_p0 / r0 = target_link->p / R
+   * 足のみ： target_end_coords = m_robot の end_coords
+   - tmp_foot_mid_pos *= (1.0 / leg_names.size());
+      - 歩いていないときはここでref_cogが決まる．ここが上手く行っていなさそう．
+      - 座標系はfixLegToCoords後の座標系
+      - ここはOK
+1. getTargetParameters の最後 IF MODE_SYNC_TO_ABC
+   - current_root = target_root
+   * 足のみ： target_p0 / r0 = target_link->p / R
+1. solveLimbIK
+   * 足のみ： m_robot->joint = qorg
+   - m_robot->rootLink() = current_root
+      - x / y のため？
+   - dif_cog(2) = m_robot->rootLink()->p(2) - target_root_p(2);
+   - m_robot->rootLink()->p = m_robot->rootLink()->p + -1 * move_base_gain * dif_cog;
+   - m_robot->rootLink()->R = target_root_R;
+   * is_active のみ： target_p0 / r0 に向かってIKを解く
+
 
 
 ### 歩く場合
@@ -325,6 +364,58 @@ name : rleg
 target_p0 :     [0,  -0.09,  0.07]
 target_link->p :     [-2.92286e-07,  -0.09,  0.0700001]
 
+
+- 目標値が腕と足でひっくり返っている
+   - sortが原因か
+   - 違うみたい
+- 登場人物は
+   - swing
+      - swing_legs_dst_coord
+         - fnslの順番
+      - swing_legs_src_coords
+         - swing_legs_dst_coords_list / support_legs_coords_list 順
+      - swing_legs_dst_coords_list
+      - swing_legs_coords
+         - calc_current_swing_legs_coods 順
+      - get_swing_legs
+         - lcg.get_swing_legsの返り値をconvert_leg_types_to_stringsした順
+   - support
+      - support_legs
+         - get_support_leg_types_from_footstep_nodes順
+      - support_legs_coords
+         - support_legs_coords_list順
+      - support_legs_coords_list
+
+- swg / sup ともに揃う理由がないので，明示的にクラス変数として保持して，こちらで揃えてあげる必要がありそう @ update_legs_coords
+- 四肢の名前情報を持っているのはstep_nodeなので，そこから引き出す．
+
+- それには命名を整理する必要有り
+   - 変数
+      - swing_legs
+         - ないので作る
+      - foot_x_axises_list
+         - refzmp_generator
+      - swing_legs_list
+         - refzmp_generator
+      - support_legs
+         - leg_coords_generator
+      - all_limbs
+         - gait_generator
+      - swing_legs_dst_coords_list
+         - leg_coords_generator
+      - support_legs_coords_list
+         - leg_coords_generator
+      - support_legs_coords
+         - leg_coords_generator
+      - swing_legs_coords
+         - leg_coords_generator
+      - swing_legs_src_coords
+         - leg_coords_generator
+      - swing_legs_dst_coords
+         - leg_coords_generator
+   - 関数
+      - get_swing_legs
+      - get_support_legs
 
 #### memo
 

@@ -36,7 +36,7 @@ namespace rats
   };
 
   std::vector<leg_type> get_support_leg_types_from_footstep_nodes(const std::vector<step_node>& fns, std::vector<std::string> _all_limbs) {
-    std::vector<std::string> fns_names, cntr_legs_names;
+    std::vector<std::string> fns_names, cntr_legs_names, tmp_all_limbs;
     std::vector<leg_type> ret;
     for (size_t i = 0; i < fns.size(); i++) {
         switch (fns.at(i).l_r) {
@@ -47,9 +47,10 @@ namespace rats
         default: std::cerr << "invalid input" << std::endl;
         }
     }
-    std::sort(_all_limbs.begin(), _all_limbs.end());
+    tmp_all_limbs = _all_limbs;
+    std::sort(tmp_all_limbs.begin(), tmp_all_limbs.end());
     std::sort(fns_names.begin(), fns_names.end());
-    std::set_difference(_all_limbs.begin(), _all_limbs.end(), /* all candidates for legs */
+    std::set_difference(tmp_all_limbs.begin(), tmp_all_limbs.end(), /* all candidates for legs */
                         fns_names.begin(), fns_names.end(),   /* support legs */
                         std::back_inserter(cntr_legs_names));  /* swing   legs */
     for (size_t i = 0; i < cntr_legs_names.size(); i++) {
@@ -374,15 +375,20 @@ namespace rats
 
     // Get current swing coords, support coords, and support leg parameters
     size_t current_footstep_index = (footstep_index < fnsl.size() - 1 ? footstep_index : fnsl.size()-1);
+    if (DEBUGP) std::cerr << "current_footstep_index : " << current_footstep_index << std::endl;
+    /* set swing legs dst coords */
     swing_legs_dst_coords.clear();
     for (size_t i = 0; i < fnsl[current_footstep_index].size(); i++) {
         swing_legs_dst_coords.push_back(fnsl[current_footstep_index].at(i).worldcoords);
+        /* ここで swing_legsを定義する ついでに下のsupport_legsも定義するのが良さそう */
     }
+    /* set support legs coords */
     support_legs = get_support_leg_types_from_footstep_nodes(fnsl[current_footstep_index], _all_limbs);
     if (footstep_index != 0) { // If not initial step, support_leg_coords is previous swing_leg_dst_coords
         support_legs_coords = support_legs_coords_list[current_footstep_index];
     }
     /* only biped ? */
+    /* set swing legs src coords */
     if (current_footstep_index > 0) {
       if (fnsl[current_footstep_index].front().l_r == fnsl[current_footstep_index-1].front().l_r) {
             swing_legs_src_coords = swing_legs_dst_coords_list[current_footstep_index-1];

@@ -1008,8 +1008,8 @@ namespace rats
           case RLEG : ret.push_back("rleg"); break;
           case LLEG : ret.push_back("lleg"); break;
           case RARM : ret.push_back("rarm"); break;
-          case LARM : ret.push_back("rarm"); break;
-          default   : ret.push_back("lleg"); break;
+          case LARM : ret.push_back("larm"); break;
+          default   : std::cerr << "invelid input" << std::endl; ret.push_back("lleg"); break;
           }
       }
       return ret;
