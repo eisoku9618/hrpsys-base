@@ -298,9 +298,8 @@ tmpR                 : fix_rot * current_foot_mid_rot.transpose()
    * 腕のみ： target_p0 / r0 = target_link->p / R
    * 足のみ： target_end_coords = m_robot の end_coords
    - tmp_foot_mid_pos *= (1.0 / leg_names.size());
-      - 歩いていないときはここでref_cogが決まる．ここが上手く行っていなさそう．
+      - 歩いていないときはここでref_cogが決まる．
       - 座標系はfixLegToCoords後の座標系
-      - ここはOK
 1. getTargetParameters の最後 IF MODE_SYNC_TO_ABC
    - current_root = target_root
    * 足のみ： target_p0 / r0 = target_link->p / R
@@ -332,37 +331,22 @@ goPos
 #### goPosTrotすると暴れる
 go-posのときと比較すると，target_p0はいい感じだけど，target_link->pが全然ダメで．腕のupperlimitにかかっている．
 
----
-go-pos-trot-ver
 
 name : larm
-target_p0 :     [0.000132309,  0.300159,  0.718077]
-target_link->p :     [-0.0355643,  0.297042,  0.960845]
-name : lleg
-target_p0 :     [-1.75438e-05,  0.09,  0.069978]
-target_link->p :     [-0.010677,  0.0883569,  0.312745]
-name : rarm
-target_p0 :     [0.000249268,  -0.299841,  0.718224]
-target_link->p :     [0.0360331,  -0.298682,  0.960992]
-name : rleg
-target_p0 :     [1.75438e-05,  -0.09,  0.070022]
-target_link->p : [0.0108018, -0.0903569,  0.312789]
+target_p0 :     [-0.0195049,  -0.0900176,  -0.183879] <!-- rlegの目標値になっている -->
+target_link->p :     [0.0184685,  0.312079,  0.437051]
 
----
-go-pos ver
-
-name : larm
-target_p0 :     [0.000132309,  0.300159,  0.718077]
-target_link->p :     [-0.0155233,  0.29996,  0.718077]
 name : lleg
-target_p0 :     [0,  0.09,  0.07]
-target_link->p :     [-2.92423e-07,  0.09,  0.0700001]
+target_p0 :     [-0.0195485,  0.0899961,  -0.233873]
+target_link->p :     [-0.0195641,  0.0894368,  -0.233871]
+
 name : rarm
-target_p0 :     [0.000249268,  -0.299841,  0.718224]
-target_link->p :     [-0.0154064,  -0.30004,  0.718224]
+target_p0 :     [0.0195546,  -0.322973,  0.423866]
+target_link->p :     [0.0196154,  -0.323662,  0.423769]
+
 name : rleg
-target_p0 :     [0,  -0.09,  0.07]
-target_link->p :     [-2.92286e-07,  -0.09,  0.0700001]
+target_p0 :     [0.0194988,  0.322952,  0.373886] <!-- larmの目標値担っている -->
+target_link->p :     [-0.0195125,  -0.0905632,  -0.233876]
 
 
 - 目標値が腕と足でひっくり返っている
@@ -375,6 +359,7 @@ target_link->p :     [-2.92286e-07,  -0.09,  0.0700001]
       - swing_legs_src_coords
          - swing_legs_dst_coords_list / support_legs_coords_list 順
       - swing_legs_dst_coords_list
+         - set_swings_supports_list でセットされる
       - swing_legs_coords
          - calc_current_swing_legs_coods 順
       - get_swing_legs
@@ -385,8 +370,10 @@ target_link->p :     [-2.92286e-07,  -0.09,  0.0700001]
       - support_legs_coords
          - support_legs_coords_list順
       - support_legs_coords_list
+         - set_swings_supports_list でセットされる
 
 - swg / sup ともに揃う理由がないので，明示的にクラス変数として保持して，こちらで揃えてあげる必要がありそう @ update_legs_coords
+- support_legs_list 的なのをセットする @ set_swings_supports_list
 - 四肢の名前情報を持っているのはstep_nodeなので，そこから引き出す．
 
 - それには命名を整理する必要有り
