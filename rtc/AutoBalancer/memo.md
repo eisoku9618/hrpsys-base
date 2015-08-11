@@ -406,29 +406,31 @@ target_link->p :     [-0.0195125,  -0.0905632,  -0.233876]
 
 #### memo
 
-1. とりあえず leg_names に "rarm" "larm"を追加してみた
-   - reset-manip-poseから(send *ri* :start-auto-balancer :limbs '(:rleg :lleg :rarm :larm))したら腕がめきゃめきゃめきゃってなって倒れた
-   - reset-manip-poseから(send *ri* :start-auto-balancer :limbs '(:rleg :lleg))したら体全体として前に動いて倒れた，これは腕と脚の真ん中にしようとして，体全体が前に移動して，また腕と脚の真ん中にしようとして，さらに前に行く，ということ？
-   - reset-manip-poseの腕もx=0のところに動かしてから(send *ri* :start-auto-balancer :limbs '(:rleg :lleg :rarm :larm))したら腕が下に下がっていてて，coかなんかで止まった
-   - reset-manip-poseの腕もx=0のところに動かしてから(send *ri* :start-auto-balancer :limbs '(:rleg :lleg))したらabcは入った．go-pos 0 0 0したらfootstepで腕も生成されて，生成終了せず止まった
-
-1. is_activeとleg_namesの違いを整理すると
-   - is_active : solveLimbIKで解くか
-   - leg_names : 重心計算に使うか？
-   - is_active : rleg / lleg , leg_names : rleg / lleg
-   - is_active : rleg / lleg / rarm / larm, leg_names : rleg / lleg / rarm / larm
-   - 両者が一致しないパターンはないとする
-
 1. 支持脚・ゆう客を交互にする前提になっているので，goPosCrawlはできない．Trotとかならできる．
 
 1. leg_namesを外から変えられるようにする
-   - done
-1. goPosTrot or setFootStepsをやる
-   - goPosTrotだと何が難しいか
-      - 何も難しくなさそう -> こちらでやってみる
-   - setFootStepsだと何が難しいか
-      - idlを作らないと行けない
-      - rtm-ros-robot-interfaceで関数を作らないといけない
-      - 両者とも既にあるやつのvectorばんを作ればいいだけ？
+    - 野沢さんのコメントのようにパラメータとしてできるようにする
 
-1. get_swing_support_mid_coords が biped only だった．どうしよう．
+#### ~~coordinatesに名前をつけて，RLEG / LLEG / RARM / LARM を判定する作戦~~ -> step_nodeを使う作戦に変更
+
+~~つまるところ，FNS_listを作る際のstep_node1つ1つのcoordsに名前をつけてあげれば，後から取り出すのもここoriginなので，勝手にcoordsに名前がついてくれて簡単になりそう~~
+-> footstep_nodes_list はこのままでOK, swing_legs_coordsとかの部分をswing_leg_nodesとかにrenameしつつ，中身を変えていく感じ
+
+- goPos
+  - go_pos_param_2_footstep_nodes_list
+    - start_ref_coords / goal_ref_coordsを計算する
+    - 1歩目はcoordinatesとその名前を引数で与えているからOK
+    - append_footstep_list_velocity_mode を for で回す
+      - ref_coords と fns_list.back()をappend_go_pos_step_nodesに与える
+        - FNS_list.back と all_limbs の差分をswing_namesとして求めて，それとref_coordsを用いて，append_go_pos_step_nodesを呼ぶ
+          - append_go_pos_nodesではswing_namesの順番で，ref_coordsとleg_default_translation_posを用いて，FNSを計算していく
+            - つまり，append_go_pos_nodes はOKという意味
+          - 前回のswingの逆足が今回のswingとなっていて，これだとcrawlできないので，ダメ
+            - crawlはsetFootStepでやると考えると一旦ここは放置で良さそう
+            - 遊脚起動生成がcycloid shuffle などあるように，支持きゃくからゆうきゃくを求める関数が会ってもいいのかも
+    - append_go_pos_nodesでもろもろ追加していくOK
+    - append_finalize_footstepで最後のFNSを追加
+      - 最後のFNSには2つ前のFNSを入れているので，これも問題ない
+    - まとめるとgo_pos_param_2_footstep_nodes_listで作られるfootstep_nodes_listの1つ1つのnodeのl_rとcoordinatesは対応しているから安全
+- startWalking
+  - 
