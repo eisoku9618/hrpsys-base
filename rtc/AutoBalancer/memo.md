@@ -417,7 +417,7 @@ target_link->p :     [-0.0195125,  -0.0905632,  -0.233876]
 -> footstep_nodes_list はこのままでOK, swing_legs_coordsとかの部分をswing_leg_nodesとかにrenameしつつ，中身を変えていく感じ
 
 - goPos
-  - go_pos_param_2_footstep_nodes_list
+  - go_pos_param_2_footstep_nodes_list : これは本当にgoPos用・setFootStepでは出てこない
     - start_ref_coords / goal_ref_coordsを計算する
     - 1歩目はcoordinatesとその名前を引数で与えているからOK
     - append_footstep_list_velocity_mode を for で回す
@@ -432,5 +432,5 @@ target_link->p :     [-0.0195125,  -0.0905632,  -0.233876]
     - append_finalize_footstepで最後のFNSを追加
       - 最後のFNSには2つ前のFNSを入れているので，これも問題ない
     - まとめるとgo_pos_param_2_footstep_nodes_listで作られるfootstep_nodes_listの1つ1つのnodeのl_rとcoordinatesは対応しているから安全
-- startWalking
-  - 
+  - startWalking : こちらはsetFootStepででてくるので，1歩前のゆうきゃくが今の支持脚理論は成り立たないからやっかい
+    - 
