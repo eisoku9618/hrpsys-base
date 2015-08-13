@@ -152,27 +152,9 @@ tmpR                 : fix_rot * current_foot_mid_rot.transpose()
 
 ---
 
-1. inside step limitationでやりたいことの左右が反転してる？
-   - 自己解決．反転していなくて，合っている．なぜならsnは支持脚で，動かすのは逆足だから．
-
-### TODO
 
 
 
-### メモ
-
-÷2とかしているところはleg_names.size()に置き換えればいい．
-
-
-### 興味
-
-1. vel_htcは何でしょう．
-
-
-
-### できていること
-
-- append_go_pos_step_nodes (const coordinates& _ref_coords, const std::vector<leg_type>& lts) で複数の足をfoot_stepnodes_listに入れることができるようになった．
 
 ### できていないこと
 
@@ -189,49 +171,8 @@ tmpR                 : fix_rot * current_foot_mid_rot.transpose()
       - MODE_SYNC_TO_ABCの場合のみ
       - it->second.target_p0 = it->second.target_link->p;
 
-### 構想
-- goPos的な何かでcrawl歩行か何かが出来れば良さそう
-   - goPosをローカルで改造して4足歩行のikを解き始める段階まで行くのが最初のステップ
 
-- AutoBalancer::goPos(const double& x, const double& y, const double& th)
-   - 入力は一般性あり
 
-#### 野沢さんに聞きたいこと2
-
-- initialize_gait_parameterの最初の方で，一歩目を上書きしているのはなぜ？
-- printしたらかわっていないみたい
-
-> 1. lcg.resetでswing_leg_dst_coordsとswing_leg_src_coordsの初期値を与えているが，proc_one_tickの中で呼ばれるlcg.update_leg_coordsではswing_leg_dst_coordsを上書きしている．初期値はどこで使われるの？
-   - 最初の一歩で使われている．
-
-とのことだったけども，上のことと関連して
-
-- go_pos_param_2_footstep xxx で footstep_nodes_listを決めて
-- initialize_gait_parameter で footstep_nodes_listの一歩目を上書きして
-- その中のlcg_set_swings_supports_listで1つ前support_legs_coords_listの一番最初の値を今回のsupport_legs_coords_listにいれている
-
-が，これはどういうあれか
-
-- get_swing_support_mid_coordsがbiped onlyだった．これはfixLegToCoordsとも関係している．
-   - 登場人物は
-      - fixLegToCoords
-      - fix_leg_coords : abcのinitializeの段階で定義されて．その後ずっと使われる．
-      - tmp_fix_coords : getTragetParameterで毎回定義されなおす．
-   - くらい
-
-   - gg_is_walking のときは
-      - gg->get_swing_support_mid_coords(tmp_fix_coords);
-   - !gg_is_walking のときは
-      - tmp_fix_coords = fix_leg_coords;
-   - そのあとに !adjust_footstep_interpolator->isEmpty() なら
-      - fix_leg_coords = いい感じ(adjustなんちゃらを考慮した)に計算した両足end-coordsの真ん中
-      - tmp_fix_coords = fix_leg_coords;
-   - さらにそのあとに
-      - tmp_fix_coordsを水平にする
-   - で，fixLegToCoords(tmp_fix_coords.pos, tmp_fix_coords.rot);する
-
-   - stopWalkingのときに
-      - fix_leg_coords = 両足のend-coordsの真ん中
 
 - N脚のときにもmid_coordsをできるようにするのはできそう -> できた
 - あとは，FixLegToCoordsが微妙っぽい
@@ -322,11 +263,7 @@ reset-poseを送っていて，上の一連の流れが終わっているとす�
    - これからfootstep_nodes_listを計算していく
    - で，onExecuteが呼ばれてgetTargetParametersが呼ばれる
    - 姿勢がangle-vectorになりつつ，rootLinkは宙に浮くようになる（VRMLのwaistの位置姿勢にセットされる）
-   - 
-
-
-
-goPos
+   -
 
 #### goPosTrotすると暴れる
 go-posのときと比較すると，target_p0はいい感じだけど，target_link->pが全然ダメで．腕のupperlimitにかかっている．
@@ -349,145 +286,35 @@ target_p0 :     [0.0194988,  0.322952,  0.373886] <!-- larmの目標値担って
 target_link->p :     [-0.0195125,  -0.0905632,  -0.233876]
 
 
-- 目標値が腕と足でひっくり返っている
-   - sortが原因か
-   - 違うみたい
-- 登場人物は
-   - swing
-      - swing_legs_dst_coord
-         - fnslの順番
-      - swing_legs_src_coords
-         - swing_legs_dst_coords_list / support_legs_coords_list 順
-      - swing_legs_dst_coords_list
-         - set_swings_supports_list でセットされる
-      - swing_legs_coords
-         - calc_current_swing_legs_coods 順
-      - get_swing_legs
-         - lcg.get_swing_legsの返り値をconvert_leg_types_to_stringsした順
-   - support
-      - support_legs
-         - get_support_leg_types_from_footstep_nodes順
-      - support_legs_coords
-         - support_legs_coords_list順
-      - support_legs_coords_list
-         - set_swings_supports_list でセットされる
 
-- swg / sup ともに揃う理由がないので，明示的にクラス変数として保持して，こちらで揃えてあげる必要がありそう @ update_legs_coords
-- support_legs_list 的なのをセットする @ set_swings_supports_list
-- 四肢の名前情報を持っているのはstep_nodeなので，そこから引き出す．
 
-- それには命名を整理する必要有り
-   - 変数
-      - swing_legs
-         - ないので作る
-      - foot_x_axises_list
-         - refzmp_generator
-      - swing_legs_list
-         - refzmp_generator
-      - support_legs
-         - leg_coords_generator
-      - all_limbs
-         - gait_generator
-      - swing_legs_dst_coords_list
-         - leg_coords_generator
-      - support_legs_coords_list
-         - leg_coords_generator
-      - support_legs_coords
-         - leg_coords_generator
-      - swing_legs_coords
-         - leg_coords_generator
-      - swing_legs_src_coords
-         - leg_coords_generator
-      - swing_legs_dst_coords
-         - leg_coords_generator
-   - 関数
-      - get_swing_legs
-      - get_support_legs
+#### 野沢さんに聞きたいこと2
 
-#### memo
+- initialize_gait_parameterの最初の方で，一歩目を上書きしているのはなぜ？
+- printしたらかわっていないみたい
+   - いらないかも by 野沢さん
 
-1. 支持脚・ゆう客を交互にする前提になっているので，goPosCrawlはできない．Trotとかならできる．
+> 1. lcg.resetでswing_leg_dst_coordsとswing_leg_src_coordsの初期値を与えているが，proc_one_tickの中で呼ばれるlcg.update_leg_coordsではswing_leg_dst_coordsを上書きしている．初期値はどこで使われるの？
+   - 最初の一歩で使われている．
 
+とのことだったけども，上のことと関連して
+
+- go_pos_param_2_footstep xxx で footstep_nodes_listを決めて
+- initialize_gait_parameter で footstep_nodes_listの一歩目を上書きして
+- その中のlcg_set_swings_supports_listで1つ前support_legs_coords_listの一番最初の値を今回のsupport_legs_coords_listにいれている
+
+が，これはどういうあれか
 1. leg_namesを外から変えられるようにする
     - 野沢さんのコメントのようにパラメータとしてできるようにする
-
-#### ~~coordinatesに名前をつけて，RLEG / LLEG / RARM / LARM を判定する作戦~~ -> step_nodeを使う作戦に変更
-
-~~つまるところ，FNS_listを作る際のstep_node1つ1つのcoordsに名前をつけてあげれば，後から取り出すのもここoriginなので，勝手にcoordsに名前がついてくれて簡単になりそう~~
--> footstep_nodes_list はこのままでOK, swing_legs_coordsとかの部分をswing_leg_nodesとかにrenameしつつ，中身を変えていく感じ
--> swing_legs_dst_coords_listとかをcoordinatesからstep_nodeに変えると，footstep_nodes_listと何ら変わらなくなるけどどうしよう．
--> overwriteとかでなんか巧みにやっているかもしれないので，とりあえずシンプルにcoordinatesをstep_nodesに置き換えまくってから野沢さんに聞くので良さそう
-
-- goPos
-  - go_pos_param_2_footstep_nodes_list : これは本当にgoPos用・setFootStepでは出てこない
-    - start_ref_coords / goal_ref_coordsを計算する
-    - 1歩目はcoordinatesとその名前を引数で与えているからOK
-    - append_footstep_list_velocity_mode を for で回す
-      - ref_coords と fns_list.back()をappend_go_pos_step_nodesに与える
-        - FNS_list.back と all_limbs の差分をswing_namesとして求めて，それとref_coordsを用いて，append_go_pos_step_nodesを呼ぶ
-          - append_go_pos_nodesではswing_namesの順番で，ref_coordsとleg_default_translation_posを用いて，FNSを計算していく
-            - つまり，append_go_pos_nodes はOKという意味
-          - 前回のswingの逆足が今回のswingとなっていて，これだとcrawlできないので，ダメ
-            - crawlはsetFootStepでやると考えると一旦ここは放置で良さそう
-            - 遊脚起動生成がcycloid shuffle などあるように，支持きゃくからゆうきゃくを求める関数が会ってもいいのかも
-    - append_go_pos_nodesでもろもろ追加していくOK
-    - append_finalize_footstepで最後のFNSを追加
-      - 最後のFNSには2つ前のFNSを入れているので，これも問題ない
-    - まとめるとgo_pos_param_2_footstep_nodes_listで作られるfootstep_nodes_listの1つ1つのnodeのl_rとcoordinatesは対応しているから安全
-  - startWalking : こちらはsetFootStepででてくるので，1歩前のゆうきゃくが今の支持脚理論は成り立たないからやっかい -> 下のset_swing_support_listで解決
-    - gg->initialize_gait_parameter(ref_cog, init_support_legs_coords, init_swing_legs_dst_coords);
-      - ここの引数を_coordsから_stepsに変える
-      - initizlize_gait_parameterの中では
-        - footstep_nodes_listの一番最初を上書きする <- いらないかも by 野沢さん
-        - push_refzmp_from_footstep_nodes_for_dual(fns, sup, swg, all_limbs)
-          - sup / swg をcoordinates から step_node に変更し，名前とstep_time取得用だったfnsがいらなくなる．
-        - lcg.reset
-          - footstep_nodes_listはAutoBalancerのクラス変数
-          - ここもcoodinates -> step_node
-          - ここと次のset_swings_supports_listが大事で，後々使われるのはこのときセットされるswg / sup の list
-        - lcg.set_swings_supports_list
-          - ここもcoodinates -> step_node
-          - 1歩前のゆうきゃくが今の支持きゃくになっちゃってる
-          - 1歩前の支持脚 - 今回の遊脚 + 前回の遊脚 かな？
-            - crawl ok
-            - biped ok
-            - trot ok
-            - so, all ok
-            - 1歩前の支持脚 - 今回の遊脚 + 前回の遊脚 = all_limbs - 今回の遊脚なので，たしかに正しい
-            /*
-            1歩前のsup : support_legs_coords_list.back()
-            1歩前のswg : swing_legs_dst_coords_list.at(j-1)
-            今のswg    : swing_legs_dst_coords_list.at(j)
-            -> 今のsup : support_legs_coords_list.back() + swing_legs_dst_coords_list.at(j-1) - swing_legs_dst_coords_list.at(j)
-            -> 型は std::vector<coordsinate>
-            */
-        - push_refzmp_from_footstep_nodes_for_single
-          - dualと同じ
-        - push_refzmp_from_footstep_nodes_for_dual
-  - gg->proc_one_tick()がtrueを返すまで繰り返す
-    - velocity_mode_flg != VEL_IDLING なら overwrite_footstep_nodes_listを呼んでいる : ちなみにここは biped only
-    - overwrite_footstep_nodes_listがあってもそれを呼ぶ
-    - emergency が呼ばれてもそれを呼ぶ
-    - ので，goPosする分には全するー
-    - で，solvedだったらupdate_legs_coordsが呼ばれる
-      - これが今回メインっぽい
-      - swing_legs_dst_coordsはfnslから作るから型を変えるだけ
-      - support_legs_coordsはsupport_legs_coords_listからもらっている
-      - swing_legs_src_coordsはset_swing_supports_listのときのように頑張って計算すれば良さそう
-        - calc_current_swing_legs_coords(swing_legs_coords, current_step_height, current_toe_angle, current_heel_angle);
-          - これも_coordsから_step_nodeになるので，引数のstep_heightとかいらなくなって嬉しい？
+1. coordinates -> step_node に直したので，zmpとかstep_timeとかstepごとにいじれるのかと思ったけど，どうなんだろう
 
 
 - コミットとしては
-  - coordinates に == を定義 or find_ifでやるか，
-  - １歩前の支持きゃくとゆうきゃくから，今回の遊脚を求めるようにする部分
-    - go_pos_param_2_ / start_walking / update_legs_coords の3箇所であるけど，一番最初のものは放置でよくて，考える対象はset_footstepだから，後ろの２つさえ直せば良い．
-    - なぜなら go_pos_param_2_ はfoostepe_onode_listを作るものなので，この時点ではfoosteps_nodes_listが分かっていなくて，それ故，1歩前の支持脚 - 今回の遊脚 + 前回の遊脚作戦が取れない
-  - coords を step_node にする部分 / start_walkingの方もcrawlに対応させる部分
-  - 微修正
-    - sp_coords / sw_coords の寿命が長い
     - 多分 get_swing_legsとかいらなくなって消せそう
+      - get_support_legs は あからさまに保存していて，これを踏まえるとあっていいのかもしれない
+      - 関数の中でやるべきか，メンバ変数として持っておくべきか相談．
     - get_dst_feet_midcoordsの名前・返り値ともにびみょい
       - https://github.com/fkanehiro/hrpsys-base/pull/730/files#diff-c0c1106962689a7d535262184ade16dbL925 がもともとの設計
       - 勘違いしちゃてて，mid_coordsではなく，ref_coordsを知りたいみたいなので，直す
+      - 奥深かった．関数名は直したけど，返り値が保存される変数名を治そうとすると，IDLも直す必要があって，rtm-ros-robot-interface.lも治す必要が出てくるので，相談項目
 の3つ
