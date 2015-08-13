@@ -415,6 +415,8 @@ target_link->p :     [-0.0195125,  -0.0905632,  -0.233876]
 
 ~~つまるところ，FNS_listを作る際のstep_node1つ1つのcoordsに名前をつけてあげれば，後から取り出すのもここoriginなので，勝手にcoordsに名前がついてくれて簡単になりそう~~
 -> footstep_nodes_list はこのままでOK, swing_legs_coordsとかの部分をswing_leg_nodesとかにrenameしつつ，中身を変えていく感じ
+-> swing_legs_dst_coords_listとかをcoordinatesからstep_nodeに変えると，footstep_nodes_listと何ら変わらなくなるけどどうしよう．
+-> overwriteとかでなんか巧みにやっているかもしれないので，とりあえずシンプルにcoordinatesをstep_nodesに置き換えまくってから野沢さんに聞くので良さそう
 
 - goPos
   - go_pos_param_2_footstep_nodes_list : これは本当にgoPos用・setFootStepでは出てこない
@@ -432,5 +434,60 @@ target_link->p :     [-0.0195125,  -0.0905632,  -0.233876]
     - append_finalize_footstepで最後のFNSを追加
       - 最後のFNSには2つ前のFNSを入れているので，これも問題ない
     - まとめるとgo_pos_param_2_footstep_nodes_listで作られるfootstep_nodes_listの1つ1つのnodeのl_rとcoordinatesは対応しているから安全
-  - startWalking : こちらはsetFootStepででてくるので，1歩前のゆうきゃくが今の支持脚理論は成り立たないからやっかい
-    - 
+  - startWalking : こちらはsetFootStepででてくるので，1歩前のゆうきゃくが今の支持脚理論は成り立たないからやっかい -> 下のset_swing_support_listで解決
+    - gg->initialize_gait_parameter(ref_cog, init_support_legs_coords, init_swing_legs_dst_coords);
+      - ここの引数を_coordsから_stepsに変える
+      - initizlize_gait_parameterの中では
+        - footstep_nodes_listの一番最初を上書きする <- いらないかも by 野沢さん
+        - push_refzmp_from_footstep_nodes_for_dual(fns, sup, swg, all_limbs)
+          - sup / swg をcoordinates から step_node に変更し，名前とstep_time取得用だったfnsがいらなくなる．
+        - lcg.reset
+          - footstep_nodes_listはAutoBalancerのクラス変数
+          - ここもcoodinates -> step_node
+          - ここと次のset_swings_supports_listが大事で，後々使われるのはこのときセットされるswg / sup の list
+        - lcg.set_swings_supports_list
+          - ここもcoodinates -> step_node
+          - 1歩前のゆうきゃくが今の支持きゃくになっちゃってる
+          - 1歩前の支持脚 - 今回の遊脚 + 前回の遊脚 かな？
+            - crawl ok
+            - biped ok
+            - trot ok
+            - so, all ok
+            - 1歩前の支持脚 - 今回の遊脚 + 前回の遊脚 = all_limbs - 今回の遊脚なので，たしかに正しい
+            /*
+            1歩前のsup : support_legs_coords_list.back()
+            1歩前のswg : swing_legs_dst_coords_list.at(j-1)
+            今のswg    : swing_legs_dst_coords_list.at(j)
+            -> 今のsup : support_legs_coords_list.back() + swing_legs_dst_coords_list.at(j-1) - swing_legs_dst_coords_list.at(j)
+            -> 型は std::vector<coordsinate>
+            */
+        - push_refzmp_from_footstep_nodes_for_single
+          - dualと同じ
+        - push_refzmp_from_footstep_nodes_for_dual
+  - gg->proc_one_tick()がtrueを返すまで繰り返す
+    - velocity_mode_flg != VEL_IDLING なら overwrite_footstep_nodes_listを呼んでいる : ちなみにここは biped only
+    - overwrite_footstep_nodes_listがあってもそれを呼ぶ
+    - emergency が呼ばれてもそれを呼ぶ
+    - ので，goPosする分には全するー
+    - で，solvedだったらupdate_legs_coordsが呼ばれる
+      - これが今回メインっぽい
+      - swing_legs_dst_coordsはfnslから作るから型を変えるだけ
+      - support_legs_coordsはsupport_legs_coords_listからもらっている
+      - swing_legs_src_coordsはset_swing_supports_listのときのように頑張って計算すれば良さそう
+        - calc_current_swing_legs_coords(swing_legs_coords, current_step_height, current_toe_angle, current_heel_angle);
+          - これも_coordsから_step_nodeになるので，引数のstep_heightとかいらなくなって嬉しい？
+
+
+- コミットとしては
+  - coordinates に == を定義 or find_ifでやるか，
+  - １歩前の支持きゃくとゆうきゃくから，今回の遊脚を求めるようにする部分
+    - go_pos_param_2_ / start_walking / update_legs_coords の3箇所であるけど，一番最初のものは放置でよくて，考える対象はset_footstepだから，後ろの２つさえ直せば良い．
+    - なぜなら go_pos_param_2_ はfoostepe_onode_listを作るものなので，この時点ではfoosteps_nodes_listが分かっていなくて，それ故，1歩前の支持脚 - 今回の遊脚 + 前回の遊脚作戦が取れない
+  - coords を step_node にする部分 / start_walkingの方もcrawlに対応させる部分
+  - 微修正
+    - sp_coords / sw_coords の寿命が長い
+    - 多分 get_swing_legsとかいらなくなって消せそう
+    - get_dst_feet_midcoordsの名前・返り値ともにびみょい
+      - https://github.com/fkanehiro/hrpsys-base/pull/730/files#diff-c0c1106962689a7d535262184ade16dbL925 がもともとの設計
+      - 勘違いしちゃてて，mid_coordsではなく，ref_coordsを知りたいみたいなので，直す
+の3つ
