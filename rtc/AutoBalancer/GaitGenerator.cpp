@@ -375,7 +375,6 @@ namespace rats
 
     // Get current swing coords, support coords, and support leg parameters
     size_t current_footstep_index = (footstep_index < fnsl.size() - 1 ? footstep_index : fnsl.size()-1);
-    if (DEBUGP) std::cerr << "current_footstep_index : " << current_footstep_index << std::endl;
     /* set swing legs dst coords */
     swing_legs_dst_coords.clear();
     for (size_t i = 0; i < fnsl[current_footstep_index].size(); i++) {
