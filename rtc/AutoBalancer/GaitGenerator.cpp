@@ -87,11 +87,11 @@ namespace rats
         foot_x_axises.push_back( hrp::Vector3(_swing_legs_coords.at(i).rot * hrp::Vector3::UnitX()) );
     }
     foot_x_axises_list.push_back(foot_x_axises);
-    std::vector<leg_type> swing_legs;
+    std::vector<leg_type> swing_leg_types;
     for (size_t i = 0; i < fns.size(); i++) {
-        swing_legs.push_back(fns.at(i).l_r);
+        swing_leg_types.push_back(fns.at(i).l_r);
     }
-    swing_legs_list.push_back( swing_legs );
+    swing_leg_types_list.push_back( swing_leg_types );
     step_count_list.push_back(static_cast<size_t>(fns.front().step_time/dt));
     //std::cerr << "double " << (fns[fs_index].l_r==RLEG?LLEG:RLEG) << " [" << refzmp_cur_list.back()(0) << " " << refzmp_cur_list.back()(1) << " " << refzmp_cur_list.back()(2) << "]" << std::endl;
   };
@@ -114,11 +114,11 @@ namespace rats
         foot_x_axises.push_back( hrp::Vector3(_support_legs_coords.at(i).rot * hrp::Vector3::UnitX()) );
     }
     foot_x_axises_list.push_back(foot_x_axises);
-    std::vector<leg_type> swing_legs;
+    std::vector<leg_type> swing_leg_types;
     for (size_t i = 0; i< fns.size(); i++) {
-        swing_legs.push_back(fns.at(i).l_r);
+        swing_leg_types.push_back(fns.at(i).l_r);
     }
-    swing_legs_list.push_back( swing_legs );
+    swing_leg_types_list.push_back( swing_leg_types );
     step_count_list.push_back(static_cast<size_t>(fns.front().step_time/dt));
     //std::cerr << "single " << fns[fs_index-1].l_r << " [" << refzmp_cur_list.back()(0) << " " << refzmp_cur_list.back()(1) << " " << refzmp_cur_list.back()(2) << "]" << std::endl;
   };
@@ -129,8 +129,8 @@ namespace rats
     size_t cnt = one_step_count - refzmp_count; // current counter (0 -> one_step_count)
     size_t double_support_count_half = (0.5 * default_double_support_ratio) * one_step_count;
     size_t double_support_static_count_half = (0.5 * default_double_support_static_ratio) * one_step_count;
-    for (size_t i = 0; i < swing_legs_list[refzmp_index].size(); i++) {
-        swing_foot_zmp_offsets.push_back(default_zmp_offsets[swing_legs_list[refzmp_index].at(i)]);
+    for (size_t i = 0; i < swing_leg_types_list[refzmp_index].size(); i++) {
+        swing_foot_zmp_offsets.push_back(default_zmp_offsets[swing_leg_types_list[refzmp_index].at(i)]);
     }
     double zmp_diff = 0.0; // difference between total swing_foot_zmp_offset and default_zmp_offset
     //if (cnt==0) std::cerr << "z " << refzmp_index << " " << refzmp_cur_list.size() << " " << fs_index << " " << (refzmp_index == refzmp_cur_list.size()-2) << " " << is_final_double_support_set << std::endl;
@@ -152,7 +152,7 @@ namespace rats
             double ratio = thp_ptr->calc_phase_ratio(cnt, SOLE2TOE, SOLE2HEEL);
             swing_foot_zmp_offsets.front()(0) = ratio * heel_zmp_offset_x + (1-ratio) * toe_zmp_offset_x;
         }
-        zmp_diff = swing_foot_zmp_offsets.front()(0)-default_zmp_offsets[swing_legs_list[refzmp_index].front()](0);
+        zmp_diff = swing_foot_zmp_offsets.front()(0)-default_zmp_offsets[swing_leg_types_list[refzmp_index].front()](0);
         if ((is_second_phase() && ( cnt < double_support_count_half )) ||
             (is_second_last_phase() && ( cnt > one_step_count - double_support_count_half ))) {
             // "* 0.5" is for double supprot period
@@ -269,8 +269,8 @@ namespace rats
       //std::cerr << "gp " << swing_ratio << " " << swing_rot_ratio << std::endl;
     }
     /* only biped */
-    current_swing_time[support_legs.front()] = (lcg_count + 0.5 * default_double_support_ratio * next_one_step_count) * dt;
-    current_swing_time[support_legs.front()==RLEG ? LLEG : RLEG] = tmp_current_swing_time;
+    current_swing_time[support_leg_types.front()] = (lcg_count + 0.5 * default_double_support_ratio * next_one_step_count) * dt;
+    current_swing_time[support_leg_types.front()==RLEG ? LLEG : RLEG] = tmp_current_swing_time;
     //std::cerr << "sl " << support_leg << " " << current_swing_time[support_leg==RLEG?0:1] << " " << current_swing_time[support_leg==RLEG?1:0] << " " << tmp_current_swing_time << " " << lcg_count << std::endl;
   };
 
@@ -375,7 +375,6 @@ namespace rats
 
     // Get current swing coords, support coords, and support leg parameters
     size_t current_footstep_index = (footstep_index < fnsl.size() - 1 ? footstep_index : fnsl.size()-1);
-    if (DEBUGP) std::cerr << "current_footstep_index : " << current_footstep_index << std::endl;
     /* set swing legs dst coords */
     swing_legs_dst_coords.clear();
     for (size_t i = 0; i < fnsl[current_footstep_index].size(); i++) {
@@ -383,7 +382,7 @@ namespace rats
         /* ここで swing_legsを定義する ついでに下のsupport_legsも定義するのが良さそう */
     }
     /* set support legs coords */
-    support_legs = get_support_leg_types_from_footstep_nodes(fnsl[current_footstep_index], _all_limbs);
+    support_leg_types = get_support_leg_types_from_footstep_nodes(fnsl[current_footstep_index], _all_limbs);
     if (footstep_index != 0) { // If not initial step, support_leg_coords is previous swing_leg_dst_coords
         support_legs_coords = support_legs_coords_list[current_footstep_index];
     }
@@ -641,14 +640,14 @@ namespace rats
     /* inside step limitation */
     if (use_inside_step_limitation) {
         if (vel_param.velocity_y > 0) {
-            if (boost::count_if(sup_fns, (&boost::lambda::_1->* &step_node::l_r == LLEG || &boost::lambda::_1->* &step_node::l_r == LARM)) > 0) dy *= 0.5;
+            if (std::count_if(sup_fns.begin(), sup_fns.end(), (&boost::lambda::_1->* &step_node::l_r == LLEG || &boost::lambda::_1->* &step_node::l_r == LARM)) > 0) dy *= 0.5;
         } else {
-            if (boost::count_if(sup_fns, (&boost::lambda::_1->* &step_node::l_r == RLEG || &boost::lambda::_1->* &step_node::l_r == RARM)) > 0) dy *= 0.5;
+            if (std::count_if(sup_fns.begin(), sup_fns.end(), (&boost::lambda::_1->* &step_node::l_r == RLEG || &boost::lambda::_1->* &step_node::l_r == RARM)) > 0) dy *= 0.5;
         }
         if (vel_param.velocity_theta > 0) {
-            if (boost::count_if(sup_fns, (&boost::lambda::_1->* &step_node::l_r == LLEG || &boost::lambda::_1->* &step_node::l_r == LARM)) > 0) dth *= 0.5;
+            if (std::count_if(sup_fns.begin(), sup_fns.end(), (&boost::lambda::_1->* &step_node::l_r == LLEG || &boost::lambda::_1->* &step_node::l_r == LARM)) > 0) dth *= 0.5;
         } else {
-            if (boost::count_if(sup_fns, (&boost::lambda::_1->* &step_node::l_r == RLEG || &boost::lambda::_1->* &step_node::l_r == RARM)) > 0) dth *= 0.5;
+            if (std::count_if(sup_fns.begin(), sup_fns.end(), (&boost::lambda::_1->* &step_node::l_r == RLEG || &boost::lambda::_1->* &step_node::l_r == RARM)) > 0) dth *= 0.5;
         }
     }
     trans = hrp::Vector3(dx * default_step_time, dy * default_step_time, 0);
