@@ -270,6 +270,7 @@ target_link->p :     [-0.0195125,  -0.0905632,  -0.233876]
 - initialize_gait_parameterの最初の方で，一歩目を上書きしているのはなぜ？
 - printしたらかわっていないみたい
    - いらないかも by 野沢さん
+   - これでバグってた
 
 > 1. lcg.resetでswing_leg_dst_coordsとswing_leg_src_coordsの初期値を与えているが，proc_one_tickの中で呼ばれるlcg.update_leg_coordsではswing_leg_dst_coordsを上書きしている．初期値はどこで使われるの？
    - 最初の一歩で使われている．
@@ -281,6 +282,7 @@ target_link->p :     [-0.0195125,  -0.0905632,  -0.233876]
 - その中のlcg_set_swings_supports_listで1つ前support_legs_coords_listの一番最初の値を今回のsupport_legs_coords_listにいれている
 
 が，これはどういうあれか
+
 1. leg_namesを外から変えられるようにする
     - 野沢さんのコメントのようにパラメータとしてできるようにする
 1. coordinates -> step_node に直したので，zmpとかstep_timeとかstepごとにいじれるのかと思ったけど，どうなんだろう
