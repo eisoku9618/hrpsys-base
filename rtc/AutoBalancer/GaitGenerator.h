@@ -251,10 +251,9 @@ namespace rats
         step_count_list.clear();
       };
       void push_refzmp_from_footstep_nodes_for_dual (const std::vector<step_node>& fns,
-                                                     const std::vector<coordinates>& _support_legs_coords,
-                                                     const std::vector<coordinates>& _swing_legs_coords,
-                                                     std::vector<std::string> _all_limbs);
-        void push_refzmp_from_footstep_nodes_for_single (const std::vector<step_node>& fns, const std::vector<coordinates>& _support_legs_coords, std::vector<std::string> _all_limbs);
+                                                     const std::vector<step_node>& _support_leg_steps,
+                                                     const std::vector<step_node>& _swing_leg_steps);
+        void push_refzmp_from_footstep_nodes_for_single (const std::vector<step_node>& fns, const std::vector<step_node>& _support_leg_stepsconst);
       void update_refzmp (const std::vector< std::vector<step_node> >& fnsl);
       // setter
       void set_indices (const size_t idx) { refzmp_index = idx; };
@@ -495,18 +494,18 @@ namespace rats
 #ifdef HAVE_MAIN
     public:
 #endif
-      std::vector< std::vector<coordinates> > swing_legs_dst_coords_list, support_legs_coords_list;
+      std::vector< std::vector<step_node> > swing_leg_dst_steps_list, support_leg_steps_list;
       // Support leg coordinates.
-      std::vector<coordinates> support_legs_coords;
+      std::vector<step_node> support_leg_steps;
       // Swing leg coordinates is interpolated from swing_leg_src_coords to swing_leg_dst_coords during swing phase.
-      std::vector<coordinates> swing_legs_coords, swing_legs_src_coords, swing_legs_dst_coords;
+      std::vector<step_node> swing_leg_steps, swing_leg_src_steps, swing_leg_dst_steps;
       double default_step_height, default_top_ratio, current_step_height, swing_ratio, swing_rot_ratio, foot_midcoords_ratio, dt, current_swing_time[2], current_toe_angle, current_heel_angle;
       // Index for current footstep. footstep_index should be [0,footstep_node_list.size()]. Current footstep is footstep_node_list[footstep_index].
       size_t footstep_index;
       // one_step_count is total counter num of current steps (= step_time/dt). lcg_count is counter for lcg. During one step, lcg_count decreases from one_step_count to 0.
       size_t lcg_count, one_step_count, next_one_step_count;
       // Current support leg
-      std::vector<leg_type> support_leg_types;
+      std::vector<leg_type> support_leg_types, swing_leg_types;
       orbit_type default_orbit_type;
       // Foot trajectory generators
       rectangle_delay_hoffarbib_trajectory_generator rdtg;
@@ -520,7 +519,7 @@ namespace rats
       interpolator* toe_heel_interpolator;
       double toe_pos_offset_x, heel_pos_offset_x, toe_angle, heel_angle, foot_dif_rot_angle;
       bool use_toe_joint;
-      void calc_current_swing_legs_coords (std::vector<coordinates>& rets, const double step_height, const double _current_toe_angle, const double _current_heel_angle);
+      void calc_current_swing_leg_steps (std::vector<step_node>& rets, const double step_height, const double _current_toe_angle, const double _current_heel_angle);
       double calc_interpolated_toe_heel_angle (const toe_heel_phase start_phase, const toe_heel_phase goal_phase, const double start, const double goal);
       void modif_foot_coords_for_toe_heel_phase (coordinates& org_coords, const double _current_toe_angle, const double _current_heel_angle);
       void cycloid_midcoords (coordinates& ret, const coordinates& start,
@@ -538,7 +537,7 @@ namespace rats
     public:
 #endif
       leg_coords_generator(const double _dt, toe_heel_phase_counter* _thp_ptr)
-        : support_legs_coords(), swing_legs_coords(), swing_legs_src_coords(), swing_legs_dst_coords(),
+        : support_leg_steps(), swing_leg_steps(), swing_leg_src_steps(), swing_leg_dst_steps(),
           default_step_height(0.05), default_top_ratio(0.5), current_step_height(0.0), swing_ratio(0), swing_rot_ratio(0), foot_midcoords_ratio(0), dt(_dt),
           current_toe_angle(0), current_heel_angle(0),
           footstep_index(0), lcg_count(0), default_orbit_type(CYCLOID),
@@ -547,6 +546,7 @@ namespace rats
           toe_pos_offset_x(0.0), heel_pos_offset_x(0.0), toe_angle(0.0), heel_angle(0.0), foot_dif_rot_angle(0.0), use_toe_joint(false)
       {
         support_leg_types = boost::assign::list_of<leg_type>(RLEG);
+        swing_leg_types = boost::assign::list_of<leg_type>(LLEG);
         rdtg.set_dt(dt);
         sdtg.set_dt(dt);
         cdtg.set_dt(dt);
@@ -596,40 +596,47 @@ namespace rats
       void set_toe_angle (const double _angle) { toe_angle = _angle; };
       void set_heel_angle (const double _angle) { heel_angle = _angle; };
       void set_use_toe_joint (const bool ut) { use_toe_joint = ut; };
-      void set_swings_supports_list (const std::vector< std::vector<step_node> >& fnsl)
+      void set_swing_support_steps_list (const std::vector< std::vector<step_node> >& fnsl)
       {
-          std::vector<coordinates> prev_support_legs_coords = support_legs_coords_list.front();
-          support_legs_coords_list.clear();
-          swing_legs_dst_coords_list.clear();
-          support_legs_coords_list.push_back(prev_support_legs_coords);
-          for (size_t j = 0; j<fnsl.size(); j++) {
-            std::vector<step_node> fns = fnsl.at(j);
-            std::vector<coordinates> tmp_swing_legs_dst_coords;
-            for (size_t i = 0; i<fns.size(); i++) {
-              tmp_swing_legs_dst_coords.push_back(fns.at(i).worldcoords);
-            }
-            swing_legs_dst_coords_list.push_back(tmp_swing_legs_dst_coords);
-            if (j>0) {
-              if (fnsl.at(j).front().l_r == fnsl.at(j-1).front().l_r) {
-                support_legs_coords_list.push_back(support_legs_coords_list.back());
-              } else {
-                support_legs_coords_list.push_back(swing_legs_dst_coords_list.at(j-1));
+          std::vector<step_node> prev_support_leg_steps = support_leg_steps_list.front();
+          support_leg_steps_list.clear();
+          swing_leg_dst_steps_list.clear();
+          support_leg_steps_list.push_back(prev_support_leg_steps);
+          swing_leg_dst_steps_list = fnsl;
+          for (size_t i = 0; i < fnsl.size(); i++) {
+              if (i > 0) {
+                  if (is_same_footstep_nodes(fnsl.at(i), fnsl.at(i-1))) {
+                      support_leg_steps_list.push_back(support_leg_steps_list.back());
+                  } else {
+                      /* current support leg steps = prev swing leg dst steps + (prev support leg steps without current swing leg names) */
+                      std::vector<step_node> tmp_support_leg_steps = swing_leg_dst_steps_list.at(i-1);
+                      std::copy(support_leg_steps_list.back().begin(),
+                                support_leg_steps_list.back().end(),
+                                std::back_inserter(tmp_support_leg_steps));
+                      for (size_t j = 0; j < swing_leg_dst_steps_list.at(i).size(); j++) {
+                          std::vector<step_node>::iterator it = std::remove_if(tmp_support_leg_steps.begin(),
+                                                                               tmp_support_leg_steps.end(),
+                                                                               (&boost::lambda::_1->* &step_node::l_r == swing_leg_dst_steps_list.at(i).at(j).l_r));
+                          tmp_support_leg_steps.erase(it, tmp_support_leg_steps.end());
+                      }
+                      support_leg_steps_list.push_back(tmp_support_leg_steps);
               }
             }
           }
       };
       void reset(const size_t _one_step_count, const size_t _next_one_step_count,
-                 const std::vector<coordinates>& _swing_legs_dst_coords,
-                 const std::vector<coordinates>& _swing_legs_src_coords,
-                 const std::vector<coordinates>& _support_legs_coords,
+                 const std::vector<step_node>& _swing_leg_dst_steps,
+                 const std::vector<step_node>& _swing_leg_src_steps,
+                 const std::vector<step_node>& _support_leg_steps,
                  const double default_double_support_ratio)
       {
-        support_legs_coords_list.clear();
-        swing_legs_dst_coords_list.clear();
-        swing_legs_dst_coords = _swing_legs_dst_coords;
-        swing_legs_src_coords = _swing_legs_src_coords;
-        support_legs_coords = _support_legs_coords;
-        support_legs_coords_list.push_back(support_legs_coords);
+        support_leg_steps_list.clear();
+        swing_leg_dst_steps_list.clear();
+        /* swing_leg_steps.clear(); */
+        swing_leg_dst_steps = _swing_leg_dst_steps;
+        swing_leg_src_steps = _swing_leg_src_steps;
+        support_leg_steps = _support_leg_steps;
+        support_leg_steps_list.push_back(support_leg_steps);
         one_step_count = lcg_count = _one_step_count;
         next_one_step_count = _next_one_step_count;
         thp_ptr->set_one_step_count(one_step_count);
@@ -663,70 +670,25 @@ namespace rats
             toe_heel_interpolator->get(&tmp, true);
         }
       };
-      void update_legs_coords (const std::vector< std::vector<step_node> >& fnsl, const double default_double_support_ratio, std::vector<std::string> _all_limbs);
+      bool is_same_footstep_nodes(const std::vector<step_node>& fns_1, const std::vector<step_node>& fns_2);
+      void update_leg_steps (const std::vector< std::vector<step_node> >& fnsl, const double default_double_support_ratio);
       size_t get_footstep_index() const { return footstep_index; };
       size_t get_lcg_count() const { return lcg_count; };
       double get_current_swing_time(const size_t idx) const { return current_swing_time[idx]; };
-      const std::vector<coordinates>& get_swing_legs_coords() const { return swing_legs_coords; };
-      const std::vector<coordinates>& get_support_legs_coords() const { return support_legs_coords; };
-      const std::vector<coordinates>& get_swing_legs_src_coords() const { return swing_legs_src_coords; };
-      const std::vector<coordinates>& get_swing_legs_dst_coords() const { return swing_legs_dst_coords; };
-      const std::vector<coordinates>& get_swing_legs_dst_coords_idx(const size_t idx) const { return swing_legs_dst_coords_list[idx]; };
-      const std::vector<coordinates>& get_support_legs_coords_idx(const size_t idx) const { return support_legs_coords_list[idx]; };
-      std::vector<leg_type> get_support_leg_types() const { return support_leg_types;};
-      std::vector<leg_type> get_swing_leg_types(const std::vector<std::string>& _all_limbs) const {
-        std::vector<leg_type> tmp_support_leg_types, tmp_all_limbs, ret_swing_legs;
-        tmp_support_leg_types = support_leg_types;
-        for (size_t i = 0; i < _all_limbs.size(); i++) {
-            if (_all_limbs.at(i) == "rleg") tmp_all_limbs.push_back(RLEG);
-            else if (_all_limbs.at(i) == "lleg") tmp_all_limbs.push_back(LLEG);
-            else if (_all_limbs.at(i) == "rarm") tmp_all_limbs.push_back(RARM);
-            else if (_all_limbs.at(i) == "larm") tmp_all_limbs.push_back(LARM);
-            else std::cerr << "invalid input" << std::endl;
-        }
-        std::sort(tmp_all_limbs.begin(), tmp_all_limbs.end());
-        std::sort(tmp_support_leg_types.begin(), tmp_support_leg_types.end());
-        std::set_difference(tmp_all_limbs.begin(), tmp_all_limbs.end(),
-                            tmp_support_leg_types.begin(), tmp_support_leg_types.end(),
-                            std::back_inserter(ret_swing_legs));
-        return ret_swing_legs;
-      };
+      const std::vector<step_node>& get_swing_leg_steps() const { return swing_leg_steps; };
+      const std::vector<step_node>& get_support_leg_steps() const { return support_leg_steps; };
+      const std::vector<step_node>& get_swing_leg_src_steps() const { return swing_leg_src_steps; };
+      const std::vector<step_node>& get_swing_leg_dst_steps() const { return swing_leg_dst_steps; };
+      const std::vector<step_node>& get_swing_leg_dst_steps_idx(const size_t idx) const { return swing_leg_dst_steps_list[idx]; };
+      const std::vector<step_node>& get_support_leg_steps_idx(const size_t idx) const { return support_leg_steps_list[idx]; };
+      const std::vector<leg_type>& get_support_leg_types() const { return support_leg_types;};
+      const std::vector<leg_type>& get_swing_leg_types() const { return swing_leg_types;};
       double get_default_step_height () const { return default_step_height;};
       void get_swing_support_mid_coords(coordinates& ret) const
       {
-        std::vector<coordinates> tmp_for_swg_vec;
-        coordinates tmp, tmp_for_swg, tmp_for_sup, tmp1, tmp2;
-        /* for swing leg */
-        for (size_t i = 0; i < swing_legs_src_coords.size(); i++) {
-            mid_coords(tmp, foot_midcoords_ratio, swing_legs_src_coords.at(i), swing_legs_dst_coords.at(i));
-            tmp_for_swg_vec.push_back(tmp);
-        }
-        switch( tmp_for_swg_vec.size() ) {
-        case 1: tmp_for_swg = tmp_for_swg_vec.front(); break;
-        case 2: mid_coords(tmp_for_swg, 0.5, tmp_for_swg_vec.front(), tmp_for_swg_vec.at(1)); break;
-        case 3:
-            mid_coords(tmp1, 1.0/3, tmp_for_swg_vec.front(), tmp_for_swg_vec.at(1));
-            mid_coords(tmp2, 1.0/3, tmp_for_swg_vec.front(), tmp_for_swg_vec.at(2));
-            mid_coords(tmp_for_swg, 0.5, tmp1, tmp2);
-            break;
-        default:
-            std::cerr << "the number of support legs is limitted within 1, 2 or 3" << std::endl;
-            break;
-        }
-        /* for support leg */
-        switch( support_legs_coords.size() ) {
-        case 1: tmp_for_sup = support_legs_coords.front(); break;
-        case 2: mid_coords(tmp_for_sup, 0.5, support_legs_coords.front(), support_legs_coords.at(1)); break;
-        case 3:
-            mid_coords(tmp1, 1.0/3, support_legs_coords.front(), support_legs_coords.at(1));
-            mid_coords(tmp2, 1.0/3, support_legs_coords.front(), support_legs_coords.at(2));
-            mid_coords(tmp_for_sup, 0.5, tmp1, tmp2);
-            break;
-        default:
-            std::cerr << "the number of swing legs is limitted within 1, 2 or 3" << std::endl;
-            break;
-        }
-        mid_coords(ret, 0.5, tmp_for_swg, tmp_for_sup);
+        coordinates tmp;
+        mid_coords(tmp, foot_midcoords_ratio, swing_leg_src_steps.front().worldcoords, swing_leg_dst_steps.front().worldcoords);
+        mid_coords(ret, 0.5, tmp, support_leg_steps.front().worldcoords);
       };
       /* vectorになったので，bothとか要らないのでは？ */
       std::vector<leg_type> get_current_support_states () const
@@ -848,8 +810,8 @@ namespace rats
       }
     };
     void initialize_gait_parameter (const hrp::Vector3& cog,
-                                    const std::vector<coordinates>& initial_support_legs_coords,
-                                    const std::vector<coordinates>& initial_swing_legs_dst_coords,
+                                    const std::vector<step_node>& initial_support_leg_steps,
+                                    const std::vector<step_node>& initial_swing_leg_dst_steps,
                                     const double delay = 1.6);
     bool proc_one_tick ();
     void append_footstep_nodes (const std::vector<std::string>& _legs, const std::vector<coordinates>& _fss)
@@ -1038,21 +1000,17 @@ namespace rats
       }
       return convert_leg_types_to_names(lts);
     };
-    std::vector<std::string> get_support_leg_names() const { return convert_leg_types_to_names(lcg.get_support_leg_types());};
-    std::vector<std::string> get_swing_leg_names() const { return convert_leg_types_to_names(lcg.get_swing_leg_types(all_limbs));};
-    const std::vector<coordinates>& get_swing_legs_coords() const { return lcg.get_swing_legs_coords(); };
-    const std::vector<coordinates>& get_support_legs_coords() const { return lcg.get_support_legs_coords(); };
-    const std::vector<coordinates>& get_swing_legs_src_coords() const { return lcg.get_swing_legs_src_coords(); };
-    const std::vector<coordinates>& get_swing_legs_dst_coords() const { return lcg.get_swing_legs_dst_coords(); };
-    const std::vector<coordinates> get_dst_feet_midcoords() const /* get foot_midcoords calculated from swing_leg_dst_coords */
+    const std::vector<std::string> get_support_leg_names() const { return convert_leg_types_to_names(lcg.get_support_leg_types());};
+    const std::vector<std::string> get_swing_leg_names() const { return convert_leg_types_to_names(lcg.get_swing_leg_types());};
+    const std::vector<step_node>& get_swing_leg_steps() const { return lcg.get_swing_leg_steps(); };
+    const std::vector<step_node>& get_support_leg_steps() const { return lcg.get_support_leg_steps(); };
+    const std::vector<step_node>& get_swing_leg_src_steps() const { return lcg.get_swing_leg_src_steps(); };
+    const std::vector<step_node>& get_swing_leg_dst_steps() const { return lcg.get_swing_leg_dst_steps(); };
+    const coordinates get_dst_foot_midcoords() const /* get foot_midcoords calculated from swing_leg_dst_coords */
     {
-      std::vector<coordinates> tmps(lcg.get_swing_legs_dst_coords());
-      std::vector<coordinates>::iterator it_tmp = tmps.begin();
-      std::vector<leg_type>::iterator it_l_r = lcg.get_swing_leg_types(all_limbs).begin();
-      for ( ; it_tmp != tmps.end() && it_l_r != lcg.get_swing_leg_types(all_limbs).end(); it_tmp++ , it_l_r++) {
-        it_tmp->pos += it_tmp->rot * hrp::Vector3(-1*footstep_param.leg_default_translate_pos[*it_l_r]);
-      }
-      return tmps;
+      coordinates tmp(lcg.get_swing_leg_dst_steps().front().worldcoords);
+      tmp.pos += tmp.rot * hrp::Vector3(-1*footstep_param.leg_default_translate_pos[lcg.get_swing_leg_dst_steps().front().l_r]);
+      return tmp;
     };
     /* TODO */
     void get_swing_support_mid_coords(coordinates& ret) const { lcg.get_swing_support_mid_coords(ret); };
