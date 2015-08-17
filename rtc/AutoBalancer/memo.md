@@ -284,3 +284,25 @@ target_link->p :     [-0.0195125,  -0.0905632,  -0.233876]
 が，これはどういうあれか
 
 1. coordinates -> step_node に直したので，zmpとかstep_timeとかstepごとにいじれるのかと思ったけど，どうなんだろう
+
+
+
+
+### setFootStepsを複数に対応させる
+
+```lisp
+(send *ri* :set-foot-steps
+   (list
+      (make-coords :coords (send *robot* :lleg :end-coords :copy-worldcoords) :name :lleg)
+      (make-coords :coords (send (send *robot* :rleg :end-coords :copy-worldcoords) :translate (float-vector 250 0 150)) :name :rleg)
+      (make-coords :coords (send (send *robot* :lleg :end-coords :copy-worldcoords) :translate (float-vector 250 0 150)) :name :lleg)))
+```
+
+みたいな入力を受ける．これがfsになる．
+
+initial_support_coords : fs[0].legのend-corods
+initial_input_coords : fs[0].worldcoords
+
+for fs.length:
+   fstrans = initial_input_coords基準で表した注目しているfsの場所
+   tmpfs = initial_support_coords + ftrans
