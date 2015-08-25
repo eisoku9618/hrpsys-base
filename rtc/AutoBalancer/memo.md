@@ -19,15 +19,15 @@ ABCIKparamだと
    - from : VRML-world座標
    - to   : 足の末端リンク座標
 - current_p0 current_r0
-   - from : 
+   - from :
    - to   :
    - target_link->p / R を保持する
 - localPos   localR
    - from : 足の末端リンク座標
    - to   : 足のend-effector座標
 - target_end_coords
-   - from : 
-   - to   : 
+   - from :
+   - to   :
 - target_link->p target_link->R
    - from : VRML-world座標
    - to   : 足の末端リンク座標
@@ -152,27 +152,9 @@ tmpR                 : fix_rot * current_foot_mid_rot.transpose()
 
 ---
 
-1. inside step limitationでやりたいことの左右が反転してる？
-   - 自己解決．反転していなくて，合っている．なぜならsnは支持脚で，動かすのは逆足だから．
-
-### TODO
 
 
 
-### メモ
-
-÷2とかしているところはleg_names.size()に置き換えればいい．
-
-
-### 興味
-
-1. vel_htcは何でしょう．
-
-
-
-### できていること
-
-- append_go_pos_step_nodes (const coordinates& _ref_coords, const std::vector<leg_type>& lts) で複数の足をfoot_stepnodes_listに入れることができるようになった．
 
 ### できていないこと
 
@@ -188,70 +170,6 @@ tmpR                 : fix_rot * current_foot_mid_rot.transpose()
    - 3つ目は足特別扱いパターンで，よくわからないから考える
       - MODE_SYNC_TO_ABCの場合のみ
       - it->second.target_p0 = it->second.target_link->p;
-
-### 構想
-- goPos的な何かでcrawl歩行か何かが出来れば良さそう
-   - goPosをローカルで改造して4足歩行のikを解き始める段階まで行くのが最初のステップ
-
-- AutoBalancer::goPos(const double& x, const double& y, const double& th)
-   - 入力は一般性あり
-
-#### 野沢さんに聞きたいこと2
-
-- initialize_gait_parameterの最初の方で，一歩目を上書きしているのはなぜ？
-- printしたらかわっていないみたい
-
-> 1. lcg.resetでswing_leg_dst_coordsとswing_leg_src_coordsの初期値を与えているが，proc_one_tickの中で呼ばれるlcg.update_leg_coordsではswing_leg_dst_coordsを上書きしている．初期値はどこで使われるの？
-   - 最初の一歩で使われている．
-
-とのことだったけども，上のことと関連して
-
-- go_pos_param_2_footstep xxx で footstep_nodes_listを決めて
-- initialize_gait_parameter で footstep_nodes_listの一歩目を上書きして
-- その中のlcg_set_swings_supports_listで1つ前support_legs_coords_listの一番最初の値を今回のsupport_legs_coords_listにいれている
-
-が，これはどういうあれか
-
-- get_swing_support_mid_coordsがbiped onlyだった．これはfixLegToCoordsとも関係している．
-   - 登場人物は
-      - fixLegToCoords
-      - fix_leg_coords : abcのinitializeの段階で定義されて．その後ずっと使われる．
-      - tmp_fix_coords : getTragetParameterで毎回定義されなおす．
-   - くらい
-
-   - gg_is_walking のときは
-      - gg->get_swing_support_mid_coords(tmp_fix_coords);
-   - !gg_is_walking のときは
-      - tmp_fix_coords = fix_leg_coords;
-   - そのあとに !adjust_footstep_interpolator->isEmpty() なら
-      - fix_leg_coords = いい感じ(adjustなんちゃらを考慮した)に計算した両足end-coordsの真ん中
-      - tmp_fix_coords = fix_leg_coords;
-   - さらにそのあとに
-      - tmp_fix_coordsを水平にする
-   - で，fixLegToCoords(tmp_fix_coords.pos, tmp_fix_coords.rot);する
-
-   - stopWalkingのときに
-      - fix_leg_coords = 両足のend-coordsの真ん中
-
-- N脚のときにもmid_coordsをできるようにするのはできそう -> できた
-- あとは，FixLegToCoordsが微妙っぽい
-- getCurrentParamters 直後は target_p0 / target_link->p ともにいい感じで，
-- getTargetParamters 直後に ずれて，solveLimbの中ではちょっと戻る．変化するのはtarget_link->pの方なので，fixLegToCoordsが影響しているはず
-- fixLegToCoordsを手足の真ん中にすれば良い？
-- fixLegToCoordsをそうしちゃうと，leg_posが足裏基準なのでずれちゃう．．．
-   - 関係無さそうで，問題は違うところにあるっぽい
-
-- もう一度座標系を整理する必要あり 絵を書く？
-- 登場人物は
-   - fix_leg_coords
-   - tmp_fix_coords
-   - rootLink->p / R
-   - target_end_coords
-   - swing_legs_src_coords / swing_legs_dst_coords / support_legs_coords
-   - footstep_nodes_list
-- くらい
-
-- fixLegToCoordsしているのは，eusから与えたangle-vectorのときの腰の位置姿勢をabcの中でのm_robotの腰の位置姿勢に与えたいからで．
 
 
 ### 歩かない場合
@@ -272,8 +190,46 @@ tmpR                 : fix_rot * current_foot_mid_rot.transpose()
       - target_end_coordsが計算されて保存される
       - ref_cogが両足のend-coordsの真ん中にセットされる．zだけ別枠で現在の重心位置 related to WORLD になる．
    - solveLimbIKが呼ばれる
+      - rootLinkにcurret_root_p/Rがセットされる
       - rootLinkの位置が現在の重心とref_cogの差分だけ動く．姿勢は変わらない．
       - で，target_p0 / target_r0 に向けて ik を解く
+
+### rootLink / angle-vector 関連
+1. getCurrentParameters
+   - current_root = m_robot->rootLink()
+   * qorg = m_robot->joint
+1. getTargetParameters の最初
+   - m_robot->rootLink() = seqから来た指令値
+   * m_robot->joint = seqから来た指令値
+1. getTargetParameters の真ん中
+   * 足のみ： target_p0 / r0 = footstepから計算
+      - これはもっと後ろでいいのでは．後ろというか腕のtarget_p0付近でいいのでは．
+   - fixLegToCoords(tmp_fix_coords.pos, tmp_fix_coords.rot);
+   - A: 現在のrootLink / angle-vector から計算した両足のend-coords
+      - seqから来た値が入っていることがポイント
+   - B: swg_coords と sup_coords の真ん中くらい
+      - tmp_fix_coords : swing_support_mid_coords
+   - A が B に一致するようm_robot->rootLinkを動かす
+1. getTargetParameters の最後
+   - target_root = m_robot->rootLink()
+      - ここで rootLink の高さをtarget_rootに教えることができる
+   * 腕のみ： target_p0 / r0 = target_link->p / R
+   * 足のみ： target_end_coords = m_robot の end_coords
+   - tmp_foot_mid_pos *= (1.0 / leg_names.size());
+      - 歩いていないときはここでref_cogが決まる．
+      - 座標系はfixLegToCoords後の座標系
+1. getTargetParameters の最後 IF MODE_SYNC_TO_ABC
+   - current_root = target_root
+   * 足のみ： target_p0 / r0 = target_link->p / R
+1. solveLimbIK
+   * 足のみ： m_robot->joint = qorg
+   - m_robot->rootLink() = current_root
+      - x / y のため？
+   - dif_cog(2) = m_robot->rootLink()->p(2) - target_root_p(2);
+   - m_robot->rootLink()->p = m_robot->rootLink()->p + -1 * move_base_gain * dif_cog;
+   - m_robot->rootLink()->R = target_root_R;
+   * is_active のみ： target_p0 / r0 に向かってIKを解く
+
 
 
 ### 歩く場合
@@ -284,73 +240,69 @@ reset-poseを送っていて，上の一連の流れが終わっているとす�
    - これからfootstep_nodes_listを計算していく
    - で，onExecuteが呼ばれてgetTargetParametersが呼ばれる
    - 姿勢がangle-vectorになりつつ，rootLinkは宙に浮くようになる（VRMLのwaistの位置姿勢にセットされる）
-   - 
-
-
-
-goPos
+   -
 
 #### goPosTrotすると暴れる
 go-posのときと比較すると，target_p0はいい感じだけど，target_link->pが全然ダメで．腕のupperlimitにかかっている．
 
----
-go-pos-trot-ver
 
 name : larm
-target_p0 :     [0.000132309,  0.300159,  0.718077]
-target_link->p :     [-0.0355643,  0.297042,  0.960845]
+target_p0 :     [-0.0195049,  -0.0900176,  -0.183879] <!-- rlegの目標値になっている -->
+target_link->p :     [0.0184685,  0.312079,  0.437051]
+
 name : lleg
-target_p0 :     [-1.75438e-05,  0.09,  0.069978]
-target_link->p :     [-0.010677,  0.0883569,  0.312745]
+target_p0 :     [-0.0195485,  0.0899961,  -0.233873]
+target_link->p :     [-0.0195641,  0.0894368,  -0.233871]
+
 name : rarm
-target_p0 :     [0.000249268,  -0.299841,  0.718224]
-target_link->p :     [0.0360331,  -0.298682,  0.960992]
+target_p0 :     [0.0195546,  -0.322973,  0.423866]
+target_link->p :     [0.0196154,  -0.323662,  0.423769]
+
 name : rleg
-target_p0 :     [1.75438e-05,  -0.09,  0.070022]
-target_link->p : [0.0108018, -0.0903569,  0.312789]
-
----
-go-pos ver
-
-name : larm
-target_p0 :     [0.000132309,  0.300159,  0.718077]
-target_link->p :     [-0.0155233,  0.29996,  0.718077]
-name : lleg
-target_p0 :     [0,  0.09,  0.07]
-target_link->p :     [-2.92423e-07,  0.09,  0.0700001]
-name : rarm
-target_p0 :     [0.000249268,  -0.299841,  0.718224]
-target_link->p :     [-0.0154064,  -0.30004,  0.718224]
-name : rleg
-target_p0 :     [0,  -0.09,  0.07]
-target_link->p :     [-2.92286e-07,  -0.09,  0.0700001]
+target_p0 :     [0.0194988,  0.322952,  0.373886] <!-- larmの目標値担っている -->
+target_link->p :     [-0.0195125,  -0.0905632,  -0.233876]
 
 
-#### memo
 
-1. とりあえず leg_names に "rarm" "larm"を追加してみた
-   - reset-manip-poseから(send *ri* :start-auto-balancer :limbs '(:rleg :lleg :rarm :larm))したら腕がめきゃめきゃめきゃってなって倒れた
-   - reset-manip-poseから(send *ri* :start-auto-balancer :limbs '(:rleg :lleg))したら体全体として前に動いて倒れた，これは腕と脚の真ん中にしようとして，体全体が前に移動して，また腕と脚の真ん中にしようとして，さらに前に行く，ということ？
-   - reset-manip-poseの腕もx=0のところに動かしてから(send *ri* :start-auto-balancer :limbs '(:rleg :lleg :rarm :larm))したら腕が下に下がっていてて，coかなんかで止まった
-   - reset-manip-poseの腕もx=0のところに動かしてから(send *ri* :start-auto-balancer :limbs '(:rleg :lleg))したらabcは入った．go-pos 0 0 0したらfootstepで腕も生成されて，生成終了せず止まった
 
-1. is_activeとleg_namesの違いを整理すると
-   - is_active : solveLimbIKで解くか
-   - leg_names : 重心計算に使うか？
-   - is_active : rleg / lleg , leg_names : rleg / lleg
-   - is_active : rleg / lleg / rarm / larm, leg_names : rleg / lleg / rarm / larm
-   - 両者が一致しないパターンはないとする
+#### 野沢さんに聞きたいこと2
 
-1. 支持脚・ゆう客を交互にする前提になっているので，goPosCrawlはできない．Trotとかならできる．
+- initialize_gait_parameterの最初の方で，一歩目を上書きしているのはなぜ？
+- printしたらかわっていないみたい
+   - いらないかも by 野沢さん
+   - これでバグってた
 
-1. leg_namesを外から変えられるようにする
-   - done
-1. goPosTrot or setFootStepsをやる
-   - goPosTrotだと何が難しいか
-      - 何も難しくなさそう -> こちらでやってみる
-   - setFootStepsだと何が難しいか
-      - idlを作らないと行けない
-      - rtm-ros-robot-interfaceで関数を作らないといけない
-      - 両者とも既にあるやつのvectorばんを作ればいいだけ？
+> 1. lcg.resetでswing_leg_dst_coordsとswing_leg_src_coordsの初期値を与えているが，proc_one_tickの中で呼ばれるlcg.update_leg_coordsではswing_leg_dst_coordsを上書きしている．初期値はどこで使われるの？
+   - 最初の一歩で使われている．
 
-1. get_swing_support_mid_coords が biped only だった．どうしよう．
+とのことだったけども，上のことと関連して
+
+- go_pos_param_2_footstep xxx で footstep_nodes_listを決めて
+- initialize_gait_parameter で footstep_nodes_listの一歩目を上書きして
+- その中のlcg_set_swings_supports_listで1つ前support_legs_coords_listの一番最初の値を今回のsupport_legs_coords_listにいれている
+
+が，これはどういうあれか
+
+1. coordinates -> step_node に直したので，zmpとかstep_timeとかstepごとにいじれるのかと思ったけど，どうなんだろう
+
+
+
+
+### setFootStepsを複数に対応させる
+
+```lisp
+(send *ri* :set-foot-steps
+   (list
+      (make-coords :coords (send *robot* :lleg :end-coords :copy-worldcoords) :name :lleg)
+      (make-coords :coords (send (send *robot* :rleg :end-coords :copy-worldcoords) :translate (float-vector 250 0 150)) :name :rleg)
+      (make-coords :coords (send (send *robot* :lleg :end-coords :copy-worldcoords) :translate (float-vector 250 0 150)) :name :lleg)))
+```
+
+みたいな入力を受ける．これがfsになる．
+
+initial_support_coords : fs[0].legのend-corods
+initial_input_coords : fs[0].worldcoords
+
+for fs.length:
+   fstrans = initial_input_coords基準で表した注目しているfsの場所
+   tmpfs = initial_support_coords + ftrans

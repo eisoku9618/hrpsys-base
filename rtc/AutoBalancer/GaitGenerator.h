@@ -716,7 +716,7 @@ namespace rats
             }
 	  }
 	} else {
-          if (get_support_leg_types().size() == 1) { /* this code cannot cover crawl */
+          if (get_support_leg_types().size() == 1) { /* this code cannot cover crawl... */
               return boost::assign::list_of(BOTH);
           } else {
               return boost::assign::list_of(ALL);

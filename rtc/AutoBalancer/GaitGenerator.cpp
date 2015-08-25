@@ -390,6 +390,7 @@ namespace rats
         swing_leg_types.push_back(it->l_r);
     }
     /* only biped ? */
+    /* set swing legs src coords */
     if (current_footstep_index > 0) {
       if (is_same_footstep_nodes(fnsl[current_footstep_index], fnsl[current_footstep_index-1])) {
             swing_leg_src_steps = swing_leg_dst_steps_list[current_footstep_index-1];
