@@ -95,7 +95,9 @@ class AutoBalancer
   bool goStop();
   bool emergencyStop ();
   bool setFootSteps(const OpenHRP::AutoBalancerService::FootstepSequence& fs, CORBA::Long overwrite_fs_idx);
+  bool setFootSteps(const OpenHRP::AutoBalancerService::FootstepsSequence& fss, CORBA::Long overwrite_fs_idx);
   bool setFootStepsWithParam(const OpenHRP::AutoBalancerService::FootstepSequence& fs, const OpenHRP::AutoBalancerService::StepParamSequence& sps, CORBA::Long overwrite_fs_idx);
+  bool setFootStepsWithParam(const OpenHRP::AutoBalancerService::FootstepsSequence& fss, const OpenHRP::AutoBalancerService::StepParamsSequence& spss, CORBA::Long overwrite_fs_idx);
   void waitFootSteps();
   void waitFootStepsEarly(const double tm);
   bool startAutoBalancer(const ::OpenHRP::AutoBalancerService::StrSequence& limbs, const OpenHRP::AutoBalancerService::StrSequence& legs);
@@ -183,6 +185,7 @@ class AutoBalancer
     rats::coordinates target_end_coords;
     hrp::Link* target_link;
     hrp::JointPathExPtr manip;
+    size_t pos_ik_error_count, rot_ik_error_count;
     bool is_active;
   };
   void getCurrentParameters();
@@ -223,7 +226,7 @@ class AutoBalancer
   coil::Mutex m_mutex;
 
   double transition_interpolator_ratio, transition_time, zmp_transition_time, adjust_footstep_transition_time;
-  interpolator *zmp_interpolator;
+  interpolator *zmp_offset_interpolator;
   interpolator *transition_interpolator;
   interpolator *adjust_footstep_interpolator;
   hrp::Vector3 input_zmp, input_basePos;
@@ -235,12 +238,13 @@ class AutoBalancer
   std::vector<hrp::Vector3> ref_forces;
 
   unsigned int m_debugLevel;
-  bool is_legged_robot, is_stop_mode;
-  int loop;
+  bool is_legged_robot, is_stop_mode, has_ik_failed;
+  int loop, ik_error_debug_print_freq;
   bool graspless_manip_mode;
   std::string graspless_manip_arm;
   hrp::Vector3 graspless_manip_p_gain;
   rats::coordinates graspless_manip_reference_trans_coords;
+  double pos_ik_thre, rot_ik_thre;
 };
 
 

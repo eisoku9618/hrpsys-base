@@ -28,6 +28,15 @@ module OpenHRP
     };
 
     /**
+     * @struct Footsteps
+     * @brief Foot step for multi legs.
+     */
+    struct Footsteps
+    {
+      sequence<Footstep> fs;
+    };
+
+    /**
      * @struct StepParam
      * @brief Step parameter for one step
      */
@@ -44,11 +53,27 @@ module OpenHRP
     };
 
     /**
+     * @struct StepParams
+     * @brief Step parameters for multi step
+     */
+    struct StepParams
+    {
+      sequence<StepParam> sps;
+    };
+
+    /**
      * @struct FootstepSequence
      * @brief Sequence of foot step.
      */
     typedef sequence<Footstep> FootstepSequence;
     typedef sequence<StepParam> StepParamSequence;
+
+    /**
+     * @struct FootstepsSequence
+     * @brief Sequence of foot steps.
+     */
+    typedef sequence<Footsteps> FootstepsSequence;
+    typedef sequence<StepParams> StepParamsSequence;
 
     /**
      * @enum SupportLegState
@@ -158,6 +183,8 @@ module OpenHRP
       boolean use_toe_joint;
       /// Use toe heel zmp transition. If true, zmp moves among default position, toe position (described by toe_zmp_offset_x), and heel position (described by heel_zmp_offset_x).
       boolean use_toe_heel_transition;
+      /// ZMP weight of RLEG, LLEG, RARM and LARM
+      sequence<double, 4> zmp_weight_map;
       /// Foot position offset[m] (rleg and lleg)
       sequence<DblSequence3> leg_default_translate_pos;
       /// Number of optional finalize footsteps in goPos
@@ -171,7 +198,7 @@ module OpenHRP
     struct AutoBalancerParam
     {
       /// ZMP offset vectors[m] for rleg and lleg (<-please set by this order)
-      sequence<DblSequence3, 2> default_zmp_offsets;
+      sequence<DblSequence3> default_zmp_offsets;
       double move_base_gain;
       ControllerMode controller_mode;
       boolean graspless_manip_mode;
@@ -185,6 +212,13 @@ module OpenHRP
       double zmp_transition_time;
       /// Transition time [s] for adjust foot step
       double adjust_footstep_transition_time;
+      StrSequence leg_names;
+      /// Flag for inverse kinematics (IK). If true, IK has failed before.
+      boolean has_ik_failed;
+      /// IK position threshold [m]
+      double pos_ik_thre;
+      /// IK rotation threshold [rad]
+      double rot_ik_thre;
     };
 
     /**
@@ -218,19 +252,19 @@ module OpenHRP
 
     /**
      * @brief Set footsteps. Returns without waiting for whole steps to be executed.
-     * @param fs is sequence of FootStep structure.
+     * @param fss is sequence of FootStep structure.
               overwrite_fs_idx is index to be overwritten. overwrite_fs_idx is used only in walking.
      * @return true if set successfully, false otherwise
      */
-    boolean setFootSteps(in FootstepSequence fs, in long overwrite_fs_idx);
+    boolean setFootSteps(in FootstepsSequence fss, in long overwrite_fs_idx);
 
     /**
      * @brief Set footsteps. Returns without waiting for whole steps to be executed.
-     * @param fs is sequence of FootStepWithParam structure.
+     * @param fss is sequence of FootStepWithParam structure.
               overwrite_fs_idx is index to be overwritten. overwrite_fs_idx is used only in walking.
      * @return true if set successfully, false otherwise
      */
-    boolean setFootStepsWithParam(in FootstepSequence fs, in StepParamSequence sps, in long overwrite_fs_idx);
+    boolean setFootStepsWithParam(in FootstepsSequence fss, in StepParamsSequence spss, in long overwrite_fs_idx);
 
     /**
      * @brief Wait for whole footsteps are executed.
