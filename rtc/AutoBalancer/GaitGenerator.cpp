@@ -110,6 +110,9 @@ namespace rats
   };
 
     /* only biped */
+    /* これを複数にする意味ある?
+       階段登るときにrefzmpをつま先に寄せたい用途とかで，返り値はretなので，listではない．
+     */
   void refzmp_generator::calc_current_refzmp (hrp::Vector3& ret, std::vector<hrp::Vector3>& swing_foot_zmp_offsets, const double default_double_support_ratio, const double default_double_support_static_ratio) const
   {
     size_t cnt = one_step_count - refzmp_count; // current counter (0 -> one_step_count)
@@ -260,6 +263,7 @@ namespace rats
       //std::cerr << "gp " << swing_ratio << " " << swing_rot_ratio << std::endl;
     }
     /* only biped */
+    /* current_swing_timeはどこで設定される？ */
     current_swing_time[support_leg_types.front()] = (lcg_count + 0.5 * default_double_support_ratio * next_one_step_count) * dt;
     current_swing_time[support_leg_types.front()==RLEG ? LLEG : RLEG] = tmp_current_swing_time;
     //std::cerr << "sl " << support_leg << " " << current_swing_time[support_leg==RLEG?0:1] << " " << current_swing_time[support_leg==RLEG?1:0] << " " << tmp_current_swing_time << " " << lcg_count << std::endl;
@@ -395,7 +399,6 @@ namespace rats
     for (std::vector<step_node>::iterator it = swing_leg_dst_steps.begin(); it != swing_leg_dst_steps.end(); it++) {
         swing_leg_types.push_back(it->l_r);
     }
-    /* only biped ? */
     /* set swing legs src coords */
     if (current_footstep_index > 0) {
       if (is_same_footstep_nodes(fnsl[current_footstep_index], fnsl[current_footstep_index-1])) {
@@ -497,7 +500,6 @@ namespace rats
       prev_que_rzmp = rzmp;
       prev_que_sfzos = sfzos;
     }
-    /* only biped */
     bool solved = preview_controller_ptr->update(refzmp, cog, swing_foot_zmp_offsets, rzmp, sfzos, (refzmp_exist_p || finalize_count < preview_controller_ptr->get_delay()-default_step_time/dt));
     /* update refzmp */
     if ( lcg.get_lcg_count() == static_cast<size_t>(footstep_nodes_list[lcg.get_footstep_index()][0].step_time/dt * 0.5) - 1 ) { // Almost middle of step time
@@ -510,6 +512,7 @@ namespace rats
             cur_leg.push_back(footstep_nodes_list[lcg.get_footstep_index()].at(i).l_r);
         }
         /* only biped */
+        /* ここは直さないと */
         overwrite_footstep_nodes_list.push_back(boost::assign::list_of(step_node(cur_leg.front()==RLEG?LLEG:RLEG, cv[0][0], lcg.get_default_step_height(), default_step_time, lcg.get_toe_angle(), lcg.get_heel_angle())));
         overwrite_footstep_nodes_list.push_back(boost::assign::list_of(step_node(cur_leg.front(), cv[1][0], lcg.get_default_step_height(), default_step_time, lcg.get_toe_angle(), lcg.get_heel_angle())));
         overwrite_footstep_nodes_list.push_back(boost::assign::list_of(step_node(cur_leg.front()==RLEG?LLEG:RLEG, cv[2][0], lcg.get_default_step_height(), default_step_time, lcg.get_toe_angle(), lcg.get_heel_angle())));
@@ -759,7 +762,6 @@ namespace rats
     bool not_solved = true;
     while (not_solved) {
       bool refzmp_exist_p = rg.get_current_refzmp(rzmp, sfzos, default_double_support_ratio, default_double_support_static_ratio);
-      /* only biped */
       not_solved = !preview_controller_ptr->update(refzmp, cog, swing_foot_zmp_offsets, rzmp, sfzos, refzmp_exist_p);
       rg.update_refzmp(footstep_nodes_list);
     }
