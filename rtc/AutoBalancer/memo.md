@@ -172,29 +172,6 @@ tmpR                 : fix_rot * current_foot_mid_rot.transpose()
       - it->second.target_p0 = it->second.target_link->p;
 
 
-
-
-- N脚のときにもmid_coordsをできるようにするのはできそう -> できた
-- あとは，FixLegToCoordsが微妙っぽい
-- getCurrentParamters 直後は target_p0 / target_link->p ともにいい感じで，
-- getTargetParamters 直後に ずれて，solveLimbの中ではちょっと戻る．変化するのはtarget_link->pの方なので，fixLegToCoordsが影響しているはず
-- fixLegToCoordsを手足の真ん中にすれば良い？
-- fixLegToCoordsをそうしちゃうと，leg_posが足裏基準なのでずれちゃう．．．
-   - 関係無さそうで，問題は違うところにあるっぽい
-
-- もう一度座標系を整理する必要あり 絵を書く？
-- 登場人物は
-   - fix_leg_coords
-   - tmp_fix_coords
-   - rootLink->p / R
-   - target_end_coords
-   - swing_legs_src_coords / swing_legs_dst_coords / support_legs_coords
-   - footstep_nodes_list
-- くらい
-
-- fixLegToCoordsしているのは，eusから与えたangle-vectorのときの腰の位置姿勢をabcの中でのm_robotの腰の位置姿勢に与えたいからで．
-
-
 ### 歩かない場合
 1. eus から angle-vector(例えばreset-pose) を 送る．rootLinkの位置姿勢とかは送らずに純粋にangle-vectorだけを送る．
    - onExecuteの中でgetTargetParamtersが呼ばれる
@@ -293,6 +270,7 @@ target_link->p :     [-0.0195125,  -0.0905632,  -0.233876]
 - initialize_gait_parameterの最初の方で，一歩目を上書きしているのはなぜ？
 - printしたらかわっていないみたい
    - いらないかも by 野沢さん
+   - これでバグってた
 
 > 1. lcg.resetでswing_leg_dst_coordsとswing_leg_src_coordsの初期値を与えているが，proc_one_tickの中で呼ばれるlcg.update_leg_coordsではswing_leg_dst_coordsを上書きしている．初期値はどこで使われるの？
    - 最初の一歩で使われている．
@@ -304,17 +282,27 @@ target_link->p :     [-0.0195125,  -0.0905632,  -0.233876]
 - その中のlcg_set_swings_supports_listで1つ前support_legs_coords_listの一番最初の値を今回のsupport_legs_coords_listにいれている
 
 が，これはどういうあれか
-1. leg_namesを外から変えられるようにする
-    - 野沢さんのコメントのようにパラメータとしてできるようにする
+
 1. coordinates -> step_node に直したので，zmpとかstep_timeとかstepごとにいじれるのかと思ったけど，どうなんだろう
 
 
-- コミットとしては
-    - 多分 get_swing_legsとかいらなくなって消せそう
-      - get_support_legs は あからさまに保存していて，これを踏まえるとあっていいのかもしれない
-      - 関数の中でやるべきか，メンバ変数として持っておくべきか相談．
-    - get_dst_feet_midcoordsの名前・返り値ともにびみょい
-      - https://github.com/fkanehiro/hrpsys-base/pull/730/files#diff-c0c1106962689a7d535262184ade16dbL925 がもともとの設計
-      - 勘違いしちゃてて，mid_coordsではなく，ref_coordsを知りたいみたいなので，直す
-      - 奥深かった．関数名は直したけど，返り値が保存される変数名を治そうとすると，IDLも直す必要があって，rtm-ros-robot-interface.lも治す必要が出てくるので，相談項目
-の3つ
+
+
+### setFootStepsを複数に対応させる
+
+```lisp
+(send *ri* :set-foot-steps
+   (list
+      (make-coords :coords (send *robot* :lleg :end-coords :copy-worldcoords) :name :lleg)
+      (make-coords :coords (send (send *robot* :rleg :end-coords :copy-worldcoords) :translate (float-vector 250 0 150)) :name :rleg)
+      (make-coords :coords (send (send *robot* :lleg :end-coords :copy-worldcoords) :translate (float-vector 250 0 150)) :name :lleg)))
+```
+
+みたいな入力を受ける．これがfsになる．
+
+initial_support_coords : fs[0].legのend-corods
+initial_input_coords : fs[0].worldcoords
+
+for fs.length:
+   fstrans = initial_input_coords基準で表した注目しているfsの場所
+   tmpfs = initial_support_coords + ftrans

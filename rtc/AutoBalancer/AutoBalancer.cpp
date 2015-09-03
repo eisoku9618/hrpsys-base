@@ -153,10 +153,6 @@ RTC::ReturnCode_t AutoBalancer::onInitialize()
       std::cerr << "[" << m_profile.instance_name << "] abc_leg_offset = " << leg_offset.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << "[m]" << std::endl;
       leg_pos.push_back(hrp::Vector3(-1*leg_offset));
       leg_pos.push_back(hrp::Vector3(leg_offset));
-      /* 
-       * leg_pos.push_back(hrp::Vector3(0.04, -0.30, 0.855));
-       * leg_pos.push_back(hrp::Vector3(0.04, +0.30, 0.855));
-       */
       leg_pos.push_back(hrp::Vector3(0.04, -0.30, 0.6));
       leg_pos.push_back(hrp::Vector3(0.04, +0.30, 0.6));
     }
@@ -806,7 +802,6 @@ hrp::Matrix33 AutoBalancer::OrientRotationMatrix (const hrp::Matrix33& rot, cons
   }
 }
 
-/* end-coords変えないとworkしない気がする． */
 void AutoBalancer::fixLegToCoords (const hrp::Vector3& fix_pos, const hrp::Matrix33& fix_rot)
 {
   // get current foot mid pos + rot
