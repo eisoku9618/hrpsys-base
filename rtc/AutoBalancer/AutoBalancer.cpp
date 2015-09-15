@@ -137,6 +137,7 @@ RTC::ReturnCode_t AutoBalancer::onInitialize()
     m_qRef.data.length(m_robot->numJoints());
     qorg.resize(m_robot->numJoints());
     qrefv.resize(m_robot->numJoints());
+    q_switching_point.resize(m_robot->numJoints());
     m_baseTform.data.length(12);
 
     control_mode = MODE_IDLE;
@@ -188,6 +189,7 @@ RTC::ReturnCode_t AutoBalancer::onInitialize()
             tp.manip->setOptionalWeightVector(optw);
         }
         tp.pos_ik_error_count = tp.rot_ik_error_count = 0;
+        tp.is_active = true;
         ikp.insert(std::pair<std::string, ABCIKparam>(ee_name , tp));
         ikp[ee_name].target_link = m_robot->link(ee_target);
         std::cerr << "[" << m_profile.instance_name << "] End Effector [" << ee_name << "]" << std::endl;
@@ -226,6 +228,10 @@ RTC::ReturnCode_t AutoBalancer::onInitialize()
     adjust_footstep_transition_time = 2.0;
     leg_names_interpolator = new interpolator(1, m_dt, interpolator::HOFFARBIB, 1);
     leg_names_interpolator_ratio = 1.0;
+    for (size_t i = 0; i < ikp.size(); i++) {
+        limbs_interpolator_vector.push_back(boost::shared_ptr<interpolator>(new interpolator(1, m_dt, interpolator::HOFFARBIB, 1)));
+        limbs_interpolator_ratio_vector.push_back(0.0);
+    }
 
     // setting stride limitations from conf file
     double stride_fwd_x_limit = 0.15;
@@ -434,6 +440,11 @@ RTC::ReturnCode_t AutoBalancer::onExecute(RTC::UniqueId ec_id)
         rel_ref_zmp = input_zmp;
       }
       // transition
+      for (size_t i = 0; i < limbs_interpolator_vector.size(); i++) {
+          if (!limbs_interpolator_vector.at(i)->isEmpty()) {
+              limbs_interpolator_vector.at(i)->get(&limbs_interpolator_ratio_vector.at(i), true);
+          }
+      }
       if (!is_transition_interpolator_empty) {
         // transition_interpolator_ratio 0=>1 : IDLE => ABC
         // transition_interpolator_ratio 1=>0 : ABC => IDLE
@@ -446,6 +457,21 @@ RTC::ReturnCode_t AutoBalancer::onExecute(RTC::UniqueId ec_id)
       } else {
         ref_basePos = m_robot->rootLink()->p;
         ref_baseRot = m_robot->rootLink()->R;
+        {
+            for (std::vector<double>::const_iterator it = limbs_interpolator_ratio_vector.begin(); it != limbs_interpolator_ratio_vector.end(); it++) {
+                std::cerr << *it << ", ";
+            }
+            std::cerr << std::endl;
+            std::map<leg_type, std::string> leg_type_map = gg->get_leg_type_map();
+            for ( std::map<std::string, ABCIKparam>::iterator it = ikp.begin(); it != ikp.end(); it++ ) {
+                std::map<leg_type, std::string>::const_iterator dst = std::find_if(leg_type_map.begin(), leg_type_map.end(), (&boost::lambda::_1->* &std::map<leg_type, std::string>::value_type::second == it->first));
+                for ( int j = 0; j < it->second.manip->numJoints(); j++ ){
+                    int i = it->second.manip->joint(j)->jointId;
+                    /* m_robot->joint(i)->q = (1-limbs_interpolator_ratio_vector.at(dst->first)) * m_qRef.data[i] + limbs_interpolator_ratio_vector.at(dst->first) * m_robot->joint(i)->q; */
+                    m_robot->joint(i)->q = (1-limbs_interpolator_ratio_vector.at(dst->first)) * m_qRef.data[i] + limbs_interpolator_ratio_vector.at(dst->first) * q_switching_point[i];
+                }
+            }
+        }
       }
       // mode change for sync
       if (control_mode == MODE_SYNC_TO_ABC) {
@@ -929,12 +955,16 @@ void AutoBalancer::startABCparam(const OpenHRP::AutoBalancerService::StrSequence
 {
   std::cerr << "[" << m_profile.instance_name << "] start auto balancer mode" << std::endl;
   Guard guard(m_mutex);
-  double tmp_ratio = 0.0;
-  transition_interpolator->clear();
-  transition_interpolator->set(&tmp_ratio);
-  tmp_ratio = 1.0;
-  transition_interpolator->go(&tmp_ratio, transition_time, true);
+  if (control_mode == MODE_IDLE) {
+      double tmp_ratio = 0.0;
+      transition_interpolator->clear();
+      transition_interpolator->set(&tmp_ratio);
+      tmp_ratio = 1.0;
+      transition_interpolator->go(&tmp_ratio, transition_time, true);
+  }
+  std::map<std::string, bool> pre_is_active_map;
   for ( std::map<std::string, ABCIKparam>::iterator it = ikp.begin(); it != ikp.end(); it++ ) {
+    pre_is_active_map.insert(std::pair<std::string, bool>(it->first, it->second.is_active));
     it->second.is_active = false;
   }
 
@@ -943,8 +973,32 @@ void AutoBalancer::startABCparam(const OpenHRP::AutoBalancerService::StrSequence
     tmp.is_active = true;
     std::cerr << "[" << m_profile.instance_name << "]   limb [" << std::string(limbs[i]) << "]" << std::endl;
   }
+  std::map<leg_type, std::string> leg_type_map = gg->get_leg_type_map();
+  for (std::map<std::string, ABCIKparam>::const_iterator it = ikp.begin(); it != ikp.end(); it++) {
+      std::map<leg_type, std::string>::const_iterator dst = std::find_if(leg_type_map.begin(), leg_type_map.end(), (&boost::lambda::_1->* &std::map<leg_type, std::string>::value_type::second == it->first));
+      if (it->second.is_active != pre_is_active_map[it->first]) {
+          if (it->second.is_active) {
+              double tmp_ratio = 0.0;
+              limbs_interpolator_vector.at(dst->first)->clear();
+              limbs_interpolator_vector.at(dst->first)->set(&tmp_ratio);
+              tmp_ratio = 1.0;
+              limbs_interpolator_vector.at(dst->first)->go(&tmp_ratio, transition_time, true);
+          } else {
+              double tmp_ratio = 1.0;
+              limbs_interpolator_vector.at(dst->first)->clear();
+              limbs_interpolator_vector.at(dst->first)->set(&tmp_ratio);
+              tmp_ratio = 0.0;
+              limbs_interpolator_vector.at(dst->first)->go(&tmp_ratio, transition_time, true);
+          }
+          for ( int i = 0; i < m_robot->numJoints(); i++ ){
+              q_switching_point[i] = m_robot->joint(i)->q;
+          }
+      }
+  }
 
-  control_mode = MODE_SYNC_TO_ABC;
+  if (control_mode == MODE_IDLE) {
+      control_mode = MODE_SYNC_TO_ABC;
+  }
 }
 
 void AutoBalancer::stopABCparam()
@@ -1014,7 +1068,6 @@ void AutoBalancer::stopWalking ()
 
 bool AutoBalancer::startAutoBalancer (const OpenHRP::AutoBalancerService::StrSequence& limbs)
 {
-  if (control_mode == MODE_IDLE) {
     has_ik_failed = false;
     for ( std::map<std::string, ABCIKparam>::iterator it = ikp.begin(); it != ikp.end(); it++ ) {
         it->second.pos_ik_error_count = it->second.rot_ik_error_count = 0;
@@ -1023,9 +1076,20 @@ bool AutoBalancer::startAutoBalancer (const OpenHRP::AutoBalancerService::StrSeq
     waitABCTransition();
     return_control_mode = MODE_ABC;
     return true;
-  } else {
-    return false;
-  }
+  /* 
+   * if (control_mode == MODE_IDLE) {
+   *   has_ik_failed = false;
+   *   for ( std::map<std::string, ABCIKparam>::iterator it = ikp.begin(); it != ikp.end(); it++ ) {
+   *       it->second.pos_ik_error_count = it->second.rot_ik_error_count = 0;
+   *   }
+   *   startABCparam(limbs);
+   *   waitABCTransition();
+   *   return_control_mode = MODE_ABC;
+   *   return true;
+   * } else {
+   *   return false;
+   * }
+   */
 }
 
 bool AutoBalancer::stopAutoBalancer ()
