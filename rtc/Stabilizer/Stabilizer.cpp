@@ -1025,8 +1025,9 @@ void Stabilizer::getTargetParameters ()
   if (st_algorithm == OpenHRP::StabilizerService::EEFM || st_algorithm == OpenHRP::StabilizerService::EEFMQP || st_algorithm == OpenHRP::StabilizerService::EEFMQPCOP) {
     // apply inverse system
     hrp::Vector3 tmp_ref_zmp = ref_zmp + eefm_zmp_delay_time_const[0] * (ref_zmp - prev_ref_zmp) / dt;
+    // initialize for new_refzmp
+    new_refzmp = tmp_ref_zmp;
     prev_ref_zmp = ref_zmp;
-    ref_zmp = tmp_ref_zmp;
   }
   ref_cog = m_robot->calcCM();
   for (size_t i = 0; i < stikp.size(); i++) {
@@ -1042,8 +1043,6 @@ void Stabilizer::getTargetParameters ()
     hrp::Vector3 foot_origin_pos;
     hrp::Matrix33 foot_origin_rot;
     calcFootOriginCoords (foot_origin_pos, foot_origin_rot);
-    // initialize for new_refzmp
-    new_refzmp = ref_zmp;
     rel_cog = m_robot->rootLink()->R.transpose() * (ref_cog-m_robot->rootLink()->p);
     // convert world (current-tmp) => local (foot_origin)
     zmp_origin_off = ref_zmp(2) - foot_origin_pos(2);
